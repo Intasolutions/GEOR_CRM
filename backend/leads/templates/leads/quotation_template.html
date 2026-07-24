@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Proposal - {{ quotation.lead.name }}</title>
+    <style>
+        /* Modern Minimalist PDF Styling */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+        @page {
+            margin: 0;
+            size: A4;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* PAGE 1: LUXURY MINIMALIST COVER */
+        .page {
+            width: 210mm;
+            height: 297mm;
+            page-break-after: always;
+            position: relative;
+            box-sizing: border-box;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .page-content {
+            padding: 80px 70px;
+            height: 100%;
+            position: relative;
+        }
+
+        .cover-page {
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .logo-wrap {
+            margin-bottom: 60px;
+        }
+
+        .company-logo {
+            max-height: 100px;
+            display: block;
+        }
+
+        .cover-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 48px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin: 0;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+        }
+
+        .cover-subtitle {
+            font-size: 20px;
+            color: #64748b;
+            margin-top: 24px;
+            font-weight: 500;
+        }
+
+        .cover-footer {
+            position: absolute;
+            bottom: 80px;
+            left: 70px;
+            width: calc(100% - 140px);
+            display: table;
+        }
+
+        .footer-col {
+            display: table-cell;
+            width: 50%;
+            vertical-align: bottom;
+        }
+
+        .label-muted {
+            font-size: 10px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .value-bright {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* SECTION HEADERS */
+        .section-header {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #3b82f6;
+            padding-bottom: 12px;
+            display: inline-block;
+        }
+
+        .content-box {
+            padding: 20px 0;
+            font-size: 15px;
+            color: #334155;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* TABLE STYLES */
+        .table-wrap {
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #f8fafc;
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 24px 20px;
+            font-size: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .item-description {
+            font-weight: 700;
+            font-size: 16px;
+            color: #1e293b;
+        }
+
+        /* TOTALS BOX */
+        .totals-block {
+            margin-top: 40px;
+            padding: 40px;
+            background: #f8fafc;
+            border-radius: 24px;
+            border: 1px solid #e2e8f0;
+            text-align: right;
+        }
+
+        .total-price {
+            font-family: 'Outfit', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            color: #0f172a;
+            margin-top: 10px;
+        }
+
+        .total-currency {
+            color: #94a3b8;
+            margin-right: 8px;
+            font-size: 24px;
+        }
+
+        /* PAGE FOOTER STRIP */
+        .footer-strip {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 70px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            font-size: 11px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .signature-block {
+            margin-top: 80px;
+            display: table;
+            width: 100%;
+        }
+
+        .sig-col {
+            display: table-cell;
+            width: 50%;
+            vertical-align: bottom;
+        }
+
+        .sig-line {
+            width: 200px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PAGE 1: COVER PAGE -->
+    <div class="page cover-page">
+        <div class="page-content">
+            <div class="logo-wrap">
+                <img class="company-logo" src="C:/Users/91811/Downloads/INTA ERP/INTA_CRM/backend/media/logo.png" alt="Company Logo">
+            </div>
+            
+            <h1 class="cover-title">{{ quotation.subject|default:"Professional Technical Proposal" }}</h1>
+            <div class="cover-subtitle">Strategic Partnership Proposal for {{ quotation.lead.name }}</div>
+
+            <div class="cover-footer">
+                <div class="footer-col">
+                    <div class="label-muted">PREPARED BY</div>
+                    <div class="value-bright" style="color: #3b82f6;">IN-TA SOLUTIONS</div>
+                    <div style="font-size: 12px; color: #475569; margin-top: 4px;">Partner: {{ quotation.user.get_full_name|default:quotation.user.username }}</div>
+                </div>
+                <div class="footer-col" style="text-align: right;">
+                    <div class="label-muted">DOCUMENT REF</div>
+                    <div class="value-bright">{{ quotation.quotation_number }}</div>
+                    <div style="font-size: 12px; color: #475569; margin-top: 4px;">{{ quotation.created_at|date:"d M Y" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 2: STRATEGY & SCOPE -->
+    <div class="page">
+        <div class="page-content">
+            <div class="section-header">Executive Summary</div>
+            <div class="content-box">
+                {{ quotation.executive_summary|default:"Strategic overview of the proposed solution and deliverables." }}
+            </div>
+
+            <div class="section-header" style="margin-top: 40px;">Scope of Work</div>
+            <div class="content-box">
+                {{ quotation.notes|default:"Technical scope and milestone definitions." }}
+            </div>
+        </div>
+        <div class="footer-strip">
+            IN-TA SOLUTIONS PVT LTD  •  info@in-tasolutions.com  •  +91 9447595381
+        </div>
+    </div>
+
+    <!-- PAGE 3: COMMERCIALS & SIGN-OFF -->
+    <div class="page">
+        <div class="page-content">
+            <div class="section-header">Solution Catalog & Pricing</div>
+            
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 60%;">Solution Deliverable</th>
+                            <th style="width: 15%; text-align: center;">Qty</th>
+                            <th style="width: 25%; text-align: right;">Value (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in quotation.items.all %}
+                        <tr>
+                            <td><div class="item-description">{{ item.description }}</div></td>
+                            <td style="text-align: center;">{{ item.quantity }}</td>
+                            <td style="text-align: right; font-weight: 700;">₹{{ item.total_price|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="totals-block">
+                <div style="font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Total Project Investment</div>
+                <div class="total-price"><span class="total-currency">₹</span>{{ quotation.total_amount|floatformat:2 }}</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 10px;">Inclusive of all taxes and discounts.</div>
+            </div>
+
+            <div class="section-header" style="margin-top: 60px;">Commercial Terms</div>
+            <div class="content-box" style="font-size: 13px; color: #64748b; font-style: italic;">
+                {{ quotation.terms_conditions|default:"Standard terms as per corporate policy." }}
+            </div>
+
+            <div class="signature-block">
+                <div class="sig-col">
+                    <div class="sig-line"></div>
+                    <div class="label-muted" style="color: #94a3b8;">CLIENT ACCEPTANCE</div>
+                </div>
+                <div class="sig-col" style="text-align: right;">
+                    <div style="font-weight: 800; color: #0f172a; margin-bottom: 40px;">FOR IN-TA SOLUTIONS</div>
+                    <div class="sig-line" style="margin-left: auto;"></div>
+                    <div class="label-muted" style="color: #94a3b8;">AUTHORIZED SIGNATORY</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-strip">
+            IN-TA SOLUTIONS PVT LTD  •  info@in-tasolutions.com  •  +91 9447595381
+        </div>
+    </div>
+
+</body>
+</html>
