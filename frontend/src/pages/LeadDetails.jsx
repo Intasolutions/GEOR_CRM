@@ -82,9 +82,21 @@ const LeadDetails = () => {
   };
 
   const handleUpdateLeadStage = async (stageId) => {
+    const targetStage = stages.find(s => s.id === stageId);
+    let payload = { stage: stageId };
+    
+    if (targetStage && targetStage.name === 'Closed Lost') {
+      const reason = window.prompt("Please enter the reason for losing this lead (optional):");
+      if (reason !== null) {
+        payload.lost_reason = reason;
+      } else {
+        return; // Cancelled prompt
+      }
+    }
+
     setUpdatingStage(true);
     try {
-      await api.patch(`leads/${id}/`, { stage: stageId });
+      await api.patch(`leads/${id}/`, payload);
       setShowOptions(false);
       fetchData();
     } catch (err) {
@@ -598,6 +610,18 @@ const LeadDetails = () => {
                     <p style={{ fontSize: '14px', fontWeight: '500' }}>{new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                   </div>
                 </div>
+
+                {lead.lost_reason && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginTop: '8px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                      <AlertCircle size={16} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '2px', fontWeight: '600' }}>Lost Reason</p>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{lead.lost_reason}</p>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-blue)' }}>

@@ -132,8 +132,22 @@ const Pipeline = () => {
       // Optimistic UI Update
       setLeads(prev => prev.map(l => l.id == leadId ? { ...l, stage: stageId } : l));
 
-      const res = await api.patch(`leads/${leadId}/`, { stage: stageId });
-      toast.success(`Moved to ${stages.find(s => s.id === stageId)?.name}`);
+      const targetStage = stages.find(s => s.id === stageId);
+      let payload = { stage: stageId };
+      
+      if (targetStage && targetStage.name === 'Closed Lost') {
+        const reason = window.prompt("Please enter the reason for losing this lead (optional):");
+        if (reason !== null) {
+          payload.lost_reason = reason;
+        } else {
+          // Revert optimistic update
+          setLeads(prev => prev.map(l => l.id == leadId ? { ...l, stage: leads.find(old => old.id == leadId)?.stage } : l));
+          return;
+        }
+      }
+
+      const res = await api.patch(`leads/${leadId}/`, payload);
+      toast.success(`Moved to ${targetStage?.name}`);
       fetchData();
     } catch (err) {
       console.error('Move failed:', err);

@@ -128,8 +128,21 @@ const Leads = () => {
 
   const handleBulkStageUpdate = async () => {
     if (!targetStageId) return;
+
+    const targetStage = stages.find(s => s.id === parseInt(targetStageId));
+    let lostReason = null;
+    
+    if (targetStage && targetStage.name === 'Closed Lost') {
+      const reason = window.prompt("Please enter the reason for losing these leads (optional):");
+      if (reason === null) return; // Cancelled
+      lostReason = reason;
+    }
+
     try {
-      await Promise.all(selectedLeads.map(id => api.patch(`leads/${id}/`, { stage: targetStageId })));
+      const payload = { stage: targetStageId };
+      if (lostReason) payload.lost_reason = lostReason;
+      
+      await Promise.all(selectedLeads.map(id => api.patch(`leads/${id}/`, payload)));
       fetchLeads(pagination.current);
       setSelectedLeads([]);
       setIsBulkStageModalOpen(false);

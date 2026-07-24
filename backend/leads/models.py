@@ -45,6 +45,7 @@ class Lead(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name='leads')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assigned_leads')
     stage = models.ForeignKey(LeadStage, on_delete=models.SET_NULL, null=True, related_name='leads')
+    lost_reason = models.TextField(null=True, blank=True)
     deal_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     lead_score = models.IntegerField(default=0) # Calculated score
     ai_status_summary = models.TextField(null=True, blank=True) # AI generated status digest
