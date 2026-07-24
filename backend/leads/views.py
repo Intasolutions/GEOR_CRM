@@ -30,11 +30,11 @@ class LeadViewSet(viewsets.ModelViewSet):
         profile = getattr(user, 'profile', None)
         role = profile.role if profile else 'agent'
         
-        # Base queryset - Role Scoping (Sales users only view assigned leads)
+        # Base queryset - Role Scoping (Sales users only view assigned leads or leads in their assigned campaigns)
         if user.is_superuser or (profile and profile.role in ['admin', 'manager']):
             queryset = Lead.objects.all()
         else:
-            queryset = Lead.objects.filter(assigned_to=user)
+            queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
 
         # Annotate with 'is_at_risk' (Contacted or beyond 'New' stage, but no future reminder)
         now = timezone.now()
@@ -263,7 +263,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         if user.is_superuser or (profile and profile.role in ['admin', 'manager']):
             base_leads = Lead.objects.all()
         else:
-            base_leads = Lead.objects.filter(assigned_to=user)
+            base_leads = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
 
         start_date = self.request.query_params.get('start_date') or self.request.query_params.get('date_from')
         end_date = self.request.query_params.get('end_date') or self.request.query_params.get('date_to')
@@ -346,7 +346,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
         if user.is_superuser or role in ['admin', 'manager']:
             queryset = Activity.objects.all()
         else:
-            queryset = Activity.objects.filter(lead__assigned_to=user)
+            queryset = Activity.objects.filter(Q(lead__assigned_to=user) | Q(lead__campaign__assigned_users=user)).distinct()
             
         lead_id = self.request.query_params.get('lead')
         if lead_id:
@@ -364,9 +364,10 @@ class ActivityViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        if not (user.is_superuser or role in ['admin', 'manager']) and lead.assigned_to != user:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have access to this lead.")
+        if not (user.is_superuser or role in ['admin', 'manager']):
+            if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You do not have access to this lead.")
             
         activity = serializer.save(user=user)
         
@@ -393,7 +394,7 @@ class ReminderViewSet(viewsets.ModelViewSet):
         if role in ['admin', 'manager']:
             queryset = Reminder.objects.all()
         else:
-            queryset = Reminder.objects.filter(lead__assigned_to=user)
+            queryset = Reminder.objects.filter(Q(lead__assigned_to=user) | Q(lead__campaign__assigned_users=user)).distinct()
             
         lead_id = self.request.query_params.get('lead')
         if lead_id:
@@ -411,9 +412,10 @@ class ReminderViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        if not (user.is_superuser or role in ['admin', 'manager']) and lead.assigned_to != user:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have access to this lead.")
+        if not (user.is_superuser or role in ['admin', 'manager']):
+            if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You do not have access to this lead.")
             
         serializer.save(user=user)
 
@@ -452,7 +454,7 @@ class LeadDocumentViewSet(viewsets.ModelViewSet):
         if user.is_superuser or role in ['admin', 'manager']:
             queryset = LeadDocument.objects.all()
         else:
-            queryset = LeadDocument.objects.filter(lead__assigned_to=user)
+            queryset = LeadDocument.objects.filter(Q(lead__assigned_to=user) | Q(lead__campaign__assigned_users=user)).distinct()
             
         lead_id = self.request.query_params.get('lead')
         if lead_id:
@@ -465,9 +467,10 @@ class LeadDocumentViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        if not (user.is_superuser or role in ['admin', 'manager']) and lead.assigned_to != user:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have access to this lead.")
+        if not (user.is_superuser or role in ['admin', 'manager']):
+            if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You do not have access to this lead.")
             
         serializer.save(user=user)
 
@@ -656,7 +659,7 @@ class QuotationViewSet(viewsets.ModelViewSet):
         if user.is_superuser or role in ['admin', 'manager']:
             queryset = Quotation.objects.all()
         else:
-            queryset = Quotation.objects.filter(lead__assigned_to=user)
+            queryset = Quotation.objects.filter(Q(lead__assigned_to=user) | Q(lead__campaign__assigned_users=user)).distinct()
             
         lead_id = self.request.query_params.get('lead')
         if lead_id:
@@ -669,9 +672,10 @@ class QuotationViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        if not (user.is_superuser or role in ['admin', 'manager']) and lead.assigned_to != user:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have access to this lead.")
+        if not (user.is_superuser or role in ['admin', 'manager']):
+            if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You do not have access to this lead.")
             
         # Generate unique quotation number: QTN-YYYYMMDD-XXXX
         from django.utils import timezone
