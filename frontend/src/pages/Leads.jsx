@@ -26,7 +26,9 @@ const Leads = () => {
   const [filters, setFilters] = useState({ stage: '', assigned_to: '' });
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [isBulkStageModalOpen, setIsBulkStageModalOpen] = useState(false);
+  const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
   const [targetStageId, setTargetStageId] = useState('');
+  const [targetUserId, setTargetUserId] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
@@ -46,9 +48,11 @@ const Leads = () => {
     try {
       const stageId = searchParams.get('stage');
       const assignedToId = searchParams.get('assigned_to');
+      const atRisk = searchParams.get('at_risk');
       let url = `leads/?page=${page}&exclude_final=true`;
       if (stageId) url += `&stage=${stageId}`;
       if (assignedToId) url += `&assigned_to=${assignedToId}`;
+      if (atRisk) url += `&at_risk=true`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
       if (dateRange.endDate) url += `&end_date=${dateRange.endDate}`;
@@ -129,6 +133,16 @@ const Leads = () => {
       fetchLeads(pagination.current);
       setSelectedLeads([]);
       setIsBulkStageModalOpen(false);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleBulkAssignUser = async () => {
+    if (!targetUserId) return;
+    try {
+      await Promise.all(selectedLeads.map(id => api.patch(`leads/${id}/`, { assigned_to: targetUserId })));
+      fetchLeads(pagination.current);
+      setSelectedLeads([]);
+      setIsBulkAssignModalOpen(false);
     } catch (err) { console.error(err); }
   };
 
@@ -266,7 +280,7 @@ const Leads = () => {
                 )}
 
                 <div style={{ minWidth: '180px', flex: 1 }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>START DATE (ASSIGNED/CREATED)</label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>START DATE (CREATED)</label>
                   <input
                     type="date"
                     className="glass-input"
@@ -276,7 +290,7 @@ const Leads = () => {
                   />
                 </div>
                 <div style={{ minWidth: '180px', flex: 1 }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>END DATE (ASSIGNED/CREATED)</label>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>END DATE (CREATED)</label>
                   <input
                     type="date"
                     className="glass-input"
@@ -285,6 +299,24 @@ const Leads = () => {
                     onChange={e => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
                   />
                 </div>
+                {user?.role === 'admin' && (
+                  <div style={{ minWidth: '180px', flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '42px', padding: '0 16px', borderRadius: '12px', background: searchParams.get('at_risk') ? '#fee2e2' : 'white', border: `1px solid ${searchParams.get('at_risk') ? '#ef4444' : '#e2e8f0'}`, color: searchParams.get('at_risk') ? '#ef4444' : colors.textMain, fontWeight: '600', fontSize: '13px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!searchParams.get('at_risk')} 
+                        onChange={e => {
+                          const newParams = new URLSearchParams(searchParams);
+                          if (e.target.checked) newParams.set('at_risk', 'true'); else newParams.delete('at_risk');
+                          navigate(`/leads?${newParams.toString()}`);
+                        }} 
+                        style={{ display: 'none' }}
+                      />
+                      <AlertCircle size={16} /> 
+                      {searchParams.get('at_risk') ? 'Showing At-Risk Only' : 'Show Not Contacted'}
+                    </label>
+                  </div>
+                )}
                 {(dateRange.startDate || dateRange.endDate) && (
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                     <button
@@ -421,6 +453,9 @@ const Leads = () => {
             <div style={{ color: 'white', fontWeight: '700', fontSize: '14px' }}>{selectedLeads.length} Selected</div>
             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
+              {user?.role === 'admin' && (
+                <button onClick={() => setIsBulkAssignModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Assign User</button>
+              )}
               <button onClick={() => setIsBulkStageModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Update Stage</button>
               <button onClick={handleBulkDelete} style={{ height: '32px', fontSize: '12px', background: '#ef4444', color: 'white', border: 'none' }}>Delete</button>
             </div>
@@ -430,25 +465,27 @@ const Leads = () => {
       </AnimatePresence>
 
       {/* Modals - Standard Select Styling */}
-      {isBulkStageModalOpen && (
+      {(isBulkStageModalOpen || isBulkAssignModalOpen) && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '400px', padding: '32px', background: 'white', borderRadius: '24px' }}>
-            <h3 style={{ marginBottom: '8px', fontSize: '20px', fontWeight: '800' }}>Bulk Stage Update</h3>
+            <h3 style={{ marginBottom: '8px', fontSize: '20px', fontWeight: '800' }}>{isBulkStageModalOpen ? 'Bulk Stage Update' : 'Bulk Reassign Leads'}</h3>
             <p style={{ color: colors.textSub, marginBottom: '24px', fontSize: '14px' }}>This will affect {selectedLeads.length} selected records.</p>
 
             <select
               className="glass-input"
               style={{ width: '100%', marginBottom: '24px', height: '48px', borderRadius: '12px' }}
-              value={targetStageId}
-              onChange={e => setTargetStageId(e.target.value)}
+              value={isBulkStageModalOpen ? targetStageId : targetUserId}
+              onChange={e => isBulkStageModalOpen ? setTargetStageId(e.target.value) : setTargetUserId(e.target.value)}
             >
               <option value="">Choose target...</option>
-              {stages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+              {(isBulkStageModalOpen ? stages : users).map(item => (
+                <option key={item.id} value={item.id}>{item.name || item.username}</option>
+              ))}
             </select>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-secondary" style={{ flex: 1, height: '48px' }} onClick={() => setIsBulkStageModalOpen(false)}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1, height: '48px' }} onClick={handleBulkStageUpdate}>Apply Changes</button>
+              <button className="btn-secondary" style={{ flex: 1, height: '48px' }} onClick={() => { setIsBulkStageModalOpen(false); setIsBulkAssignModalOpen(false); }}>Cancel</button>
+              <button className="btn-primary" style={{ flex: 1, height: '48px' }} onClick={isBulkStageModalOpen ? handleBulkStageUpdate : handleBulkAssignUser}>Apply Changes</button>
             </div>
           </motion.div>
         </div>

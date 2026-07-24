@@ -93,6 +93,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         if only_final == 'true':
             queryset = queryset.filter(stage__is_final=True)
             
+        at_risk = self.request.query_params.get('at_risk')
+        if at_risk == 'true':
+            queryset = queryset.filter(is_at_risk=True)
+            
         # Prioritize At-Risk leads first, then chronological
         return queryset.order_by('-is_at_risk', '-created_at')
 
