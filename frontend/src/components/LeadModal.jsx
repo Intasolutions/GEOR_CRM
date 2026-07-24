@@ -13,25 +13,30 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
     lead_source: '',
     stage: '',
     campaign: '',
+    assigned_to: '',
     deal_value: 0,
     custom_data: {}
   });
   const [campaigns, setCampaigns] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
       Promise.all([
         api.get('stages/'),
         api.get('custom-fields/'),
-        api.get('campaigns/')
-      ]).then(([stagesRes, fieldsRes, campRes]) => {
+        api.get('campaigns/'),
+        api.get('users/')
+      ]).then(([stagesRes, fieldsRes, campRes, usersRes]) => {
         const stageData = Array.isArray(stagesRes.data) ? stagesRes.data : [];
         const fieldData = Array.isArray(fieldsRes.data) ? fieldsRes.data : [];
         const campData = Array.isArray(campRes.data) ? campRes.data : [];
+        const userData = Array.isArray(usersRes.data) ? usersRes.data : [];
         
         setStages(stageData);
         setCustomFields(fieldData);
         setCampaigns(campData);
+        setUsers(userData);
         
         if (stageData.length > 0) {
           setFormData(prev => ({ ...prev, stage: stageData[0].id }));
@@ -41,6 +46,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
         setStages([]);
         setCustomFields([]);
         setCampaigns([]);
+        setUsers([]);
       });
     }
   }, [isOpen]);
@@ -54,7 +60,8 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
       const submissionData = {
         ...formData,
         campaign: formData.campaign === "" ? null : formData.campaign,
-        stage: formData.stage === "" ? null : formData.stage
+        stage: formData.stage === "" ? null : formData.stage,
+        assigned_to: formData.assigned_to === "" ? null : formData.assigned_to
       };
       
       await api.post('leads/', submissionData);
@@ -146,6 +153,18 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
               >
                 <option value="">-- No Campaign --</option>
                 {(campaigns || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Assigned To</label>
+              <select 
+                className="glass-input"
+                style={{ appearance: 'none' }}
+                value={formData.assigned_to}
+                onChange={e => setFormData({ ...formData, assigned_to: e.target.value })}
+              >
+                <option value="">-- Unassigned --</option>
+                {(users || []).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
               </select>
             </div>
             <div>

@@ -25,9 +25,12 @@ const LeadDetails = () => {
   const [activityType, setActivityType] = useState('call');
   const [showOptions, setShowOptions] = useState(false);
   const [stages, setStages] = useState([]);
+  const [users, setUsers] = useState([]);
   const [updatingStage, setUpdatingStage] = useState(false);
   const [dealValue, setDealValue] = useState('');
   const [isEditingDealValue, setIsEditingDealValue] = useState(false);
+  const [assignedTo, setAssignedTo] = useState('');
+  const [isEditingAssignedTo, setIsEditingAssignedTo] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [quotations, setQuotations] = useState([]);
@@ -51,14 +54,15 @@ const LeadDetails = () => {
 
   const fetchData = async () => {
     try {
-      const [leadRes, actRes, remRes, stageRes, auditRes, docRes, quoteRes] = await Promise.all([
+      const [leadRes, actRes, remRes, stageRes, auditRes, docRes, quoteRes, usersRes] = await Promise.all([
         api.get(`leads/${id}/`),
         api.get(`activities/?lead=${id}`),
         api.get(`reminders/?lead=${id}`),
         api.get('stages/'),
         api.get(`leads/${id}/audit_logs/`),
         api.get(`documents/?lead=${id}`),
-        api.get(`quotations/?lead=${id}`)
+        api.get(`quotations/?lead=${id}`),
+        api.get(`users/`)
       ]);
       setLead(leadRes.data);
       setAuditLogs(auditRes.data);
@@ -67,7 +71,9 @@ const LeadDetails = () => {
       setStages(stageRes.data);
       setDocuments(docRes.data);
       setQuotations(quoteRes.data);
+      setUsers(usersRes.data);
       setDealValue(leadRes.data.deal_value || '0.00');
+      setAssignedTo(leadRes.data.assigned_to || '');
     } catch (err) {
       console.error(err);
     } finally {
@@ -93,6 +99,17 @@ const LeadDetails = () => {
       await api.patch(`leads/${id}/`, { deal_value: dealValue });
       setIsEditingDealValue(false);
       fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateAssignedTo = async () => {
+    try {
+      await api.patch(`leads/${id}/`, { assigned_to: assignedTo || null });
+      setIsEditingAssignedTo(false);
+      fetchData();
+      import('react-hot-toast').then(m => m.toast.success('Assignee updated!'));
     } catch (err) {
       console.error(err);
     }
@@ -604,6 +621,36 @@ const LeadDetails = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <p style={{ fontSize: '16px', fontWeight: '700', color: 'var(--brand-blue)' }}>₹{parseFloat(lead.deal_value || 0).toLocaleString('en-IN')}</p>
                         <button onClick={() => setIsEditingDealValue(true)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                          <Edit3 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <UserCheck size={16} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Assigned To</p>
+                    {isEditingAssignedTo ? (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <select
+                          className="glass-input"
+                          value={assignedTo}
+                          onChange={e => setAssignedTo(e.target.value)}
+                          style={{ padding: '4px 8px', fontSize: '13px', width: '140px', borderRadius: '4px' }}
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                        </select>
+                        <button onClick={handleUpdateAssignedTo} className="btn-primary" style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px' }}>Save</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.assigned_to_name || 'Unassigned'}</p>
+                        <button onClick={() => setIsEditingAssignedTo(true)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                           <Edit3 size={12} />
                         </button>
                       </div>
