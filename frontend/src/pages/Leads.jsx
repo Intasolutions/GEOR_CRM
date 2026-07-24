@@ -19,13 +19,10 @@ const Leads = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pagination, setPagination] = useState({ count: 0, current: 1 });
   const [selectedLeads, setSelectedLeads] = useState([]);
-  const [campaigns, setCampaigns] = useState([]);
-  const [isBulkCampaignModalOpen, setIsBulkCampaignModalOpen] = useState(false);
-  const [targetCampaignId, setTargetCampaignId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [stages, setStages] = useState([]);
-  const [filters, setFilters] = useState({ stage: '', campaign: '' });
+  const [filters, setFilters] = useState({ stage: '' });
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [isBulkStageModalOpen, setIsBulkStageModalOpen] = useState(false);
   const [targetStageId, setTargetStageId] = useState('');
@@ -46,10 +43,7 @@ const Leads = () => {
   const fetchLeads = async (page = 1) => {
     setLoading(true);
     try {
-      const campId = searchParams.get('campaign');
-      const stageId = searchParams.get('stage');
       let url = `leads/?page=${page}&exclude_final=true`;
-      if (campId) url += `&campaign=${campId}`;
       if (stageId) url += `&stage=${stageId}`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
@@ -65,12 +59,6 @@ const Leads = () => {
     }
   };
 
-  const fetchCampaigns = async () => {
-    try {
-      const res = await api.get('campaigns/');
-      setCampaigns(Array.isArray(res.data) ? res.data : []);
-    } catch (err) { }
-  };
 
   const fetchStages = async () => {
     try {
@@ -82,16 +70,14 @@ const Leads = () => {
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
-    fetchCampaigns();
     fetchStages();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    const campId = searchParams.get('campaign') || '';
     const stageId = searchParams.get('stage') || '';
-    setFilters({ campaign: campId, stage: stageId });
-    if (campId || stageId) setShowFilters(true);
+    setFilters({ stage: stageId });
+    if (stageId) setShowFilters(true);
   }, [searchParams]);
 
   useEffect(() => {
@@ -120,15 +106,6 @@ const Leads = () => {
     }
   };
 
-  const handleBulkAssign = async () => {
-    if (!targetCampaignId) return;
-    try {
-      await Promise.all(selectedLeads.map(id => api.patch(`leads/${id}/`, { campaign: targetCampaignId })));
-      fetchLeads(pagination.current);
-      setSelectedLeads([]);
-      setIsBulkCampaignModalOpen(false);
-    } catch (err) { console.error(err); }
-  };
 
   const handleBulkStageUpdate = async () => {
     if (!targetStageId) return;
@@ -254,13 +231,7 @@ const Leads = () => {
                     {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
-                <div style={{ minWidth: '200px', flex: 1 }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>CAMPAIGN SOURCE</label>
-                  <select className="glass-input" style={{ width: '100%', background: 'white' }} value={filters.campaign} onChange={e => navigate(`/leads?campaign=${e.target.value}`)}>
-                    <option value="">All Campaigns</option>
-                    {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
+
                 <div style={{ minWidth: '180px', flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>START DATE (ASSIGNED/CREATED)</label>
                   <input
@@ -417,7 +388,6 @@ const Leads = () => {
             <div style={{ color: 'white', fontWeight: '700', fontSize: '14px' }}>{selectedLeads.length} Selected</div>
             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setIsBulkCampaignModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Assign Campaign</button>
               <button onClick={() => setIsBulkStageModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Update Stage</button>
               <button onClick={handleBulkDelete} style={{ height: '32px', fontSize: '12px', background: '#ef4444', color: 'white', border: 'none' }}>Delete</button>
             </div>
@@ -427,25 +397,25 @@ const Leads = () => {
       </AnimatePresence>
 
       {/* Modals - Standard Select Styling */}
-      {(isBulkCampaignModalOpen || isBulkStageModalOpen) && (
+      {isBulkStageModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-card" style={{ width: '400px', padding: '32px', background: 'white', borderRadius: '24px' }}>
-            <h3 style={{ marginBottom: '8px', fontSize: '20px', fontWeight: '800' }}>{isBulkCampaignModalOpen ? 'Move to Campaign' : 'Bulk Stage Update'}</h3>
+            <h3 style={{ marginBottom: '8px', fontSize: '20px', fontWeight: '800' }}>Bulk Stage Update</h3>
             <p style={{ color: colors.textSub, marginBottom: '24px', fontSize: '14px' }}>This will affect {selectedLeads.length} selected records.</p>
 
             <select
               className="glass-input"
               style={{ width: '100%', marginBottom: '24px', height: '48px', borderRadius: '12px' }}
-              value={isBulkCampaignModalOpen ? targetCampaignId : targetStageId}
-              onChange={e => isBulkCampaignModalOpen ? setTargetCampaignId(e.target.value) : setTargetStageId(e.target.value)}
+              value={targetStageId}
+              onChange={e => setTargetStageId(e.target.value)}
             >
               <option value="">Choose target...</option>
-              {(isBulkCampaignModalOpen ? campaigns : stages).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+              {stages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-secondary" style={{ flex: 1, height: '48px' }} onClick={() => { setIsBulkCampaignModalOpen(false); setIsBulkStageModalOpen(false); }}>Cancel</button>
-              <button className="btn-primary" style={{ flex: 1, height: '48px' }} onClick={isBulkCampaignModalOpen ? handleBulkAssign : handleBulkStageUpdate}>Apply Changes</button>
+              <button className="btn-secondary" style={{ flex: 1, height: '48px' }} onClick={() => setIsBulkStageModalOpen(false)}>Cancel</button>
+              <button className="btn-primary" style={{ flex: 1, height: '48px' }} onClick={handleBulkStageUpdate}>Apply Changes</button>
             </div>
           </motion.div>
         </div>

@@ -12,7 +12,6 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
     company: '',
     lead_source: '',
     stage: '',
-    campaign: '',
     assigned_to: '',
     deal_value: 0,
     custom_data: {}
@@ -25,17 +24,14 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
       Promise.all([
         api.get('stages/'),
         api.get('custom-fields/'),
-        api.get('campaigns/'),
         api.get('users/')
-      ]).then(([stagesRes, fieldsRes, campRes, usersRes]) => {
+      ]).then(([stagesRes, fieldsRes, usersRes]) => {
         const stageData = Array.isArray(stagesRes.data) ? stagesRes.data : [];
         const fieldData = Array.isArray(fieldsRes.data) ? fieldsRes.data : [];
-        const campData = Array.isArray(campRes.data) ? campRes.data : [];
         const userData = Array.isArray(usersRes.data) ? usersRes.data : [];
         
         setStages(stageData);
         setCustomFields(fieldData);
-        setCampaigns(campData);
         setUsers(userData);
         
         if (stageData.length > 0) {
@@ -45,7 +41,6 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
         console.error('LeadModal initial fetch error:', err);
         setStages([]);
         setCustomFields([]);
-        setCampaigns([]);
         setUsers([]);
       });
     }
@@ -59,7 +54,6 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
       // Clean up empty strings for IDs so Django doesn't error
       const submissionData = {
         ...formData,
-        campaign: formData.campaign === "" ? null : formData.campaign,
         stage: formData.stage === "" ? null : formData.stage,
         assigned_to: formData.assigned_to === "" ? null : formData.assigned_to
       };
@@ -141,18 +135,6 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
                 onChange={e => setFormData({ ...formData, stage: e.target.value })}
               >
                 {(stages || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Campaign</label>
-              <select 
-                className="glass-input"
-                style={{ appearance: 'none' }}
-                value={formData.campaign}
-                onChange={e => setFormData({ ...formData, campaign: e.target.value })}
-              >
-                <option value="">-- No Campaign --</option>
-                {(campaigns || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>

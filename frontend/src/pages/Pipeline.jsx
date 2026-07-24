@@ -17,27 +17,16 @@ const Pipeline = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [campaigns, setCampaigns] = useState([]);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchData();
-    fetchCampaigns();
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [dateRange]);
 
-  const fetchCampaigns = async () => {
-    try {
-      const res = await api.get('campaigns/');
-      setCampaigns(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error('Failed to fetch campaigns:', err);
-    }
-  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -74,9 +63,7 @@ const Pipeline = () => {
       lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesCampaign = !selectedCampaign || lead.campaign == selectedCampaign;
-
-    return matchesSearch && matchesCampaign;
+    return matchesSearch;
   });
 
   // Horizontal Scroll Handler for Dragging
@@ -225,19 +212,7 @@ const Pipeline = () => {
             </div>
             {showFilters && (
               <>
-                <div style={{ flex: 1 }}>
-                  <select
-                    className="glass-input"
-                    style={{ height: '40px', fontSize: '14px' }}
-                    value={selectedCampaign}
-                    onChange={(e) => setSelectedCampaign(e.target.value)}
-                  >
-                    <option value="">All Campaigns</option>
-                    {campaigns.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
+
                 <div style={{ flex: 1 }}>
                   <input
                     type="date"
