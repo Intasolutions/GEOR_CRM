@@ -20,6 +20,7 @@ from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
+from datetime import timedelta
 
 
 class LeadViewSet(viewsets.ModelViewSet):
@@ -28,10 +29,9 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         user = self.request.user
         profile = getattr(user, 'profile', None)
-        role = profile.role if profile else 'agent'
         
         # Base queryset - Role Scoping (Sales users only view assigned leads or leads in their assigned campaigns)
-        if user.is_superuser or (profile and profile.role in ['admin', 'manager']):
+        if user.is_superuser or (profile and profile.role and profile.role.lower() in ['admin', 'manager']):
             queryset = Lead.objects.all()
         else:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
