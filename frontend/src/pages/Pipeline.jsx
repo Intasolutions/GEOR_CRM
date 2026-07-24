@@ -50,12 +50,12 @@ const Pipeline = () => {
         api.get('stages/'),
         api.get(leadsUrl)
       ]);
-      
+
       const stagesData = Array.isArray(stagesRes.data) ? stagesRes.data : [];
       const leadsData = Array.isArray(leadsRes.data) ? leadsRes.data : leadsRes.data?.results || [];
       const totalCount = Array.isArray(leadsRes.data) ? leadsRes.data.length : (leadsRes.data?.count || 0);
 
-      setStages(stagesData.sort((a,b) => (a.order || 0) - (b.order || 0)));
+      setStages(stagesData.sort((a, b) => (a.order || 0) - (b.order || 0)));
       setLeads(leadsData);
       setPagination({ count: totalCount, current: 1 });
     } catch (err) {
@@ -68,14 +68,14 @@ const Pipeline = () => {
 
   // Local filtering for fast search feedback
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCampaign = !selectedCampaign || lead.campaign == selectedCampaign;
-    
+
     return matchesSearch && matchesCampaign;
   });
 
@@ -85,15 +85,15 @@ const Pipeline = () => {
 
   const handleDragOverScroll = (e) => {
     onDragOver(e);
-    
+
     if (!boardRef.current) return;
-    
+
     const { clientX } = e;
     const { left, right, width } = boardRef.current.getBoundingClientRect();
     const scrollThreshold = 100; // Pixels from edge to start scrolling
-    
+
     clearInterval(scrollInterval.current);
-    
+
     if (clientX < left + scrollThreshold) {
       scrollInterval.current = setInterval(() => {
         boardRef.current.scrollLeft -= 10;
@@ -144,7 +144,7 @@ const Pipeline = () => {
     try {
       // Optimistic UI Update
       setLeads(prev => prev.map(l => l.id == leadId ? { ...l, stage: stageId } : l));
-      
+
       const res = await api.patch(`leads/${leadId}/`, { stage: stageId });
       toast.success(`Moved to ${stages.find(s => s.id === stageId)?.name}`);
       fetchData();
@@ -158,11 +158,11 @@ const Pipeline = () => {
   if (loading) return <div className="page-container">Loading Pipeline...</div>;
 
   return (
-    <div className="page-container" style={{ 
+    <div className="page-container" style={{
       height: 'calc(100vh - 40px)', // Fits perfectly within main area
-      display: 'flex', 
+      display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden', 
+      overflow: 'hidden',
       paddingBottom: 0 // Allow board to touch the bottom
     }}>
       <header className="page-header-responsive" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '24px 0', gap: '20px', flexWrap: 'wrap' }}>
@@ -171,8 +171,8 @@ const Pipeline = () => {
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{isMobile ? 'Vertical List View' : 'Kanban Board View (Drag & Drop)'}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
-          <button 
-            className={showFilters ? "btn-primary" : "btn-secondary"} 
+          <button
+            className={showFilters ? "btn-primary" : "btn-secondary"}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -182,9 +182,9 @@ const Pipeline = () => {
             <ListIcon size={16} /> Table
           </Link>
           {(user?.role === 'admin' || user?.permissions?.leads?.create) && (
-            <button 
+            <button
               onClick={() => setIsModalOpen(true)}
-              className="btn-primary" 
+              className="btn-primary"
               style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
             >
               <Plus size={18} /> Add Lead
@@ -196,13 +196,13 @@ const Pipeline = () => {
       {/* Search and Filters Bar */}
       <AnimatePresence>
         {(showFilters || searchQuery) && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            style={{ 
-              marginBottom: '20px', 
-              display: 'flex', 
+            style={{
+              marginBottom: '20px',
+              display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
               gap: '12px',
               padding: '16px',
@@ -214,9 +214,9 @@ const Pipeline = () => {
           >
             <div style={{ position: 'relative', flex: 2 }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              <input 
-                type="text" 
-                placeholder="Search leads by name, email, phone or company..." 
+              <input
+                type="text"
+                placeholder="Search leads by name, email, phone or company..."
                 className="glass-input"
                 style={{ paddingLeft: '36px', height: '40px', fontSize: '14px' }}
                 value={searchQuery}
@@ -226,8 +226,8 @@ const Pipeline = () => {
             {showFilters && (
               <>
                 <div style={{ flex: 1 }}>
-                  <select 
-                    className="glass-input" 
+                  <select
+                    className="glass-input"
                     style={{ height: '40px', fontSize: '14px' }}
                     value={selectedCampaign}
                     onChange={(e) => setSelectedCampaign(e.target.value)}
@@ -270,8 +270,8 @@ const Pipeline = () => {
               </>
             )}
             {(searchQuery || selectedCampaign) && (
-              <button 
-                className="btn-text" 
+              <button
+                className="btn-text"
                 style={{ fontSize: '12px', color: 'var(--brand-blue)', fontWeight: '600' }}
                 onClick={() => {
                   setSearchQuery('');
@@ -286,42 +286,42 @@ const Pipeline = () => {
       </AnimatePresence>
 
 
-      <div 
+      <div
         ref={boardRef}
         onDragLeave={stopScroll}
         onDrop={stopScroll}
-        style={{ 
-          flex: 1, 
-          display: 'flex', 
+        style={{
+          flex: 1,
+          display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: '20px', 
-          overflowX: isMobile ? 'hidden' : 'auto', 
+          gap: '20px',
+          overflowX: isMobile ? 'hidden' : 'auto',
           overflowY: isMobile ? 'auto' : 'hidden',
           paddingBottom: '20px',
           alignItems: 'stretch',
           scrollSnapType: isMobile ? 'none' : 'x mandatory',
           WebkitOverflowScrolling: 'touch',
-          minHeight: 0 
+          minHeight: 0
         }}>
         {stages.map(stage => {
           const stageLeads = filteredLeads.filter(l => l.stage == stage.id);
           const stageTotal = stageLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
           return (
-            <div 
-              key={stage.id} 
+            <div
+              key={stage.id}
               onDragOver={handleDragOverScroll}
               onDragEnter={(e) => onDragEnter(e, stage.id)}
               onDragLeave={onDragLeave}
               onDrop={(e) => onDrop(e, stage.id)}
-              style={{ 
+              style={{
                 minWidth: isMobile ? '100%' : '320px',
                 maxWidth: isMobile ? '100%' : '320px',
                 flexBasis: isMobile ? 'auto' : '320px',
-                background: draggedOverStage === stage.id ? '#f5f3ff' : '#f8fafc', 
-                borderRadius: '16px', 
-                display: 'flex', 
+                background: draggedOverStage === stage.id ? '#f5f3ff' : '#f8fafc',
+                borderRadius: '16px',
+                display: 'flex',
                 flexDirection: 'column',
-                height: isMobile ? 'auto' : '100%', 
+                height: isMobile ? 'auto' : '100%',
                 border: draggedOverStage === stage.id ? '2px dashed #7c3aed' : '1px solid #e2e8f0',
                 flexShrink: 0,
                 marginBottom: isMobile ? '24px' : '0',
@@ -345,17 +345,17 @@ const Pipeline = () => {
               </div>
 
               {/* Card List Area */}
-              <div 
+              <div
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, stage.id)}
-                style={{ 
-                  padding: '16px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
+                style={{
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
                   gap: '12px',
-                  overflowY: 'auto', 
+                  overflowY: 'auto',
                   flex: 1,
-                  minHeight: 0, 
+                  minHeight: 0,
                   scrollbarWidth: 'thin',
                   background: draggedOverStage === stage.id ? 'rgba(37, 99, 235, 0.01)' : '#f8fafc'
                 }}>
@@ -373,10 +373,10 @@ const Pipeline = () => {
                         onDragStart={(e) => onDragStart(e, lead.id)}
                         whileHover={{ scale: 1.01, y: -2 }}
                         className="glass-card"
-                        style={{ 
-                          padding: '16px', 
-                          cursor: isMobile ? 'default' : 'grab', 
-                          marginBottom: '0', 
+                        style={{
+                          padding: '16px',
+                          cursor: isMobile ? 'default' : 'grab',
+                          marginBottom: '0',
                           background: '#ffffff',
                           border: '1px solid #e2e8f0',
                           borderRadius: '12px',
@@ -395,17 +395,17 @@ const Pipeline = () => {
                           )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '10px', marginTop: '10px' }}>
                             <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>{new Date(lead.updated_at).toLocaleDateString()}</span>
-                            <div style={{ 
-                              width: '24px', 
-                              height: '24px', 
-                              borderRadius: '50%', 
-                              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center', 
-                              fontSize: '10px', 
-                              fontWeight: '800', 
-                              color: 'white' 
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              color: 'white'
                             }}>
                               {lead?.name?.[0]?.toUpperCase()}
                             </div>
@@ -427,10 +427,10 @@ const Pipeline = () => {
         </p>
       </div>
 
-      <LeadModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onRefresh={() => fetchData(pagination.current)} 
+      <LeadModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onRefresh={() => fetchData(pagination.current)}
       />
     </div>
   );
