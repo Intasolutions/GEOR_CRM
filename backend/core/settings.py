@@ -89,6 +89,17 @@ DATABASES = {
     }
 }
 
+# If we are in production on DigitalOcean, use PostgreSQL
+if os.environ.get('DB_PASSWORD'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'crmgeor_db'),
+        'USER': os.environ.get('DB_USER', 'geor_admin'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
