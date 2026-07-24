@@ -26,7 +26,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-production-key-change-t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['crm.in-tasolutions.com', '72.62.197.68', '64.227.137.196', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['crm.studyatgeorgia.com', 'crm.in-tasolutions.com', '72.62.197.68', '64.227.137.196', 'localhost', '127.0.0.1']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://crm.in-tasolutions.com',
