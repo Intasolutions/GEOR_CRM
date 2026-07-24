@@ -22,7 +22,8 @@ const Leads = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [stages, setStages] = useState([]);
-  const [filters, setFilters] = useState({ stage: '' });
+  const [users, setUsers] = useState([]);
+  const [filters, setFilters] = useState({ stage: '', assigned_to: '' });
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [isBulkStageModalOpen, setIsBulkStageModalOpen] = useState(false);
   const [targetStageId, setTargetStageId] = useState('');
@@ -43,8 +44,11 @@ const Leads = () => {
   const fetchLeads = async (page = 1) => {
     setLoading(true);
     try {
+      const stageId = searchParams.get('stage');
+      const assignedToId = searchParams.get('assigned_to');
       let url = `leads/?page=${page}&exclude_final=true`;
       if (stageId) url += `&stage=${stageId}`;
+      if (assignedToId) url += `&assigned_to=${assignedToId}`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
       if (dateRange.endDate) url += `&end_date=${dateRange.endDate}`;
@@ -67,17 +71,28 @@ const Leads = () => {
     } catch (err) { }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('users/');
+      setUsers(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { }
+  };
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
     fetchStages();
+    if (user?.role === 'admin') {
+      fetchUsers();
+    }
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     const stageId = searchParams.get('stage') || '';
-    setFilters({ stage: stageId });
-    if (stageId) setShowFilters(true);
+    const assignedToId = searchParams.get('assigned_to') || '';
+    setFilters({ stage: stageId, assigned_to: assignedToId });
+    if (stageId || assignedToId) setShowFilters(true);
   }, [searchParams]);
 
   useEffect(() => {
@@ -226,11 +241,29 @@ const Leads = () => {
               <div style={{ padding: '24px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: '200px', flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>PIPELINE STAGE</label>
-                  <select className="glass-input" style={{ width: '100%', background: 'white' }} value={filters.stage} onChange={e => navigate(`/leads?stage=${e.target.value}`)}>
+                  <select className="glass-input" style={{ width: '100%', background: 'white' }} value={filters.stage} onChange={e => {
+                    const newParams = new URLSearchParams(searchParams);
+                    if (e.target.value) newParams.set('stage', e.target.value); else newParams.delete('stage');
+                    navigate(`/leads?${newParams.toString()}`);
+                  }}>
                     <option value="">All Stages</option>
                     {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
+                
+                {user?.role === 'admin' && (
+                <div style={{ minWidth: '200px', flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>ASSIGNED TO</label>
+                  <select className="glass-input" style={{ width: '100%', background: 'white' }} value={filters.assigned_to} onChange={e => {
+                    const newParams = new URLSearchParams(searchParams);
+                    if (e.target.value) newParams.set('assigned_to', e.target.value); else newParams.delete('assigned_to');
+                    navigate(`/leads?${newParams.toString()}`);
+                  }}>
+                    <option value="">All Users</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                  </select>
+                </div>
+                )}
 
                 <div style={{ minWidth: '180px', flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>START DATE (ASSIGNED/CREATED)</label>
