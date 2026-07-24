@@ -45,12 +45,11 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         queryset = queryset.annotate(
             has_future_reminder=Exists(future_reminders)
-        ).annotate(
+        )
+        queryset = queryset.annotate(
             is_at_risk=Case(
                 When(
-                    Q(stage__is_final=False) & 
-                    (Q(last_contacted_at__isnull=False) | Q(stage__order__gt=1)) & 
-                    Q(has_future_reminder=False),
+                    (Q(last_contacted_at__lt=now - timedelta(days=7)) | Q(last_contacted_at__isnull=True)) & ~Exists(future_reminders),
                     then=Value(True)
                 ),
                 default=Value(False),
@@ -86,12 +85,14 @@ class LeadViewSet(viewsets.ModelViewSet):
             
         # Support for new "Archive & Reports" module
         exclude_final = self.request.query_params.get('exclude_final')
-        if exclude_final == 'true':
-            queryset = queryset.exclude(stage__is_final=True)
-        
-        only_final = self.request.query_params.get('only_final')
-        if only_final == 'true':
+        is_final = self.request.query_params.get('is_final')
+        if is_final == 'true':
             queryset = queryset.filter(stage__is_final=True)
+        elif is_final == 'false':
+            queryset = queryset.filter(Q(stage__is_final=False) | Q(stage__isnull=True))
+            
+        if exclude_final == 'true':
+            queryset = queryset.filter(Q(stage__is_final=False) | Q(stage__isnull=True))
             
         at_risk = self.request.query_params.get('at_risk')
         if at_risk == 'true':
