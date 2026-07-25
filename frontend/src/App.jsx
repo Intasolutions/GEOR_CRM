@@ -81,7 +81,7 @@ const ProtectedLayout = ({ children }) => {
         zIndex: 50
       }} className="mobile-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '36px' }} />
+          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '48px' }} />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -126,7 +126,7 @@ const ProtectedLayout = ({ children }) => {
         {/* Brand Header */}
         <div className="mobile-hide" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/img/logo.png" alt="CRM Logo" style={{ height: '36px' }} />
+            <img src="/img/logo.png" alt="CRM Logo" style={{ height: '56px' }} />
             <div>
               <span style={{ fontSize: '9px', fontWeight: '700', color: '#475569', border: '1px solid #e2e8f0', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', display: 'inline-block', marginTop: '2px', background: '#ffffff' }}>Enterprise</span>
             </div>

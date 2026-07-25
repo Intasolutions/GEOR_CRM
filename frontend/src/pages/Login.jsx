@@ -36,7 +36,7 @@ const Login = () => {
         style={{ width: '100%', maxWidth: '400px', padding: 'clamp(24px, 5vw, 40px)' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '72px', margin: '0 auto 16px', display: 'block' }} />
+          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '96px', margin: '0 auto 16px', display: 'block' }} />
           <p style={{ color: 'var(--text-secondary)' }}>Welcome back, please login</p>
         </div>
 
