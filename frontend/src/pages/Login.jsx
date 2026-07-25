@@ -36,19 +36,7 @@ const Login = () => {
         style={{ width: '100%', maxWidth: '400px', padding: 'clamp(24px, 5vw, 40px)' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ 
-            width: '64px', 
-            height: '64px', 
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px'
-          }}>
-            <ShieldCheck size={32} color="white" />
-          </div>
-          <h1 style={{ fontSize: '28px', marginBottom: '8px' }}>CRM</h1>
+          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '72px', margin: '0 auto 16px', display: 'block' }} />
           <p style={{ color: 'var(--text-secondary)' }}>Welcome back, please login</p>
         </div>
 

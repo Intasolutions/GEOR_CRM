@@ -81,19 +81,7 @@ const ProtectedLayout = ({ children }) => {
         zIndex: 50
       }} className="mobile-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ 
-            width: '32px', 
-            height: '32px', 
-            borderRadius: '6px', 
-            background: '#0f172a',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white'
-          }}>
-            <Users size={16} />
-          </div>
-          <span style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>CRM</span>
+          <img src="/img/logo.png" alt="CRM Logo" style={{ height: '36px' }} />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -138,20 +126,8 @@ const ProtectedLayout = ({ children }) => {
         {/* Brand Header */}
         <div className="mobile-hide" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ 
-              width: '32px', 
-              height: '32px', 
-              borderRadius: '6px', 
-              background: '#0f172a',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white'
-            }}>
-              <Users size={16} />
-            </div>
+            <img src="/img/logo.png" alt="CRM Logo" style={{ height: '36px' }} />
             <div>
-              <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', display: 'block', lineHeight: 1.1 }}>CRM</span>
               <span style={{ fontSize: '9px', fontWeight: '700', color: '#475569', border: '1px solid #e2e8f0', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', display: 'inline-block', marginTop: '2px', background: '#ffffff' }}>Enterprise</span>
             </div>
           </div>
