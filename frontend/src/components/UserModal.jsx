@@ -121,10 +121,15 @@ const UserModal = ({ isOpen, onClose, onRefresh, editingUser = null }) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = { ...formData };
+      if (!payload.password) {
+        delete payload.password;
+      }
+      
       if (editingUser) {
-        await api.put(`users/${editingUser.id}/`, formData);
+        await api.put(`users/${editingUser.id}/`, payload);
       } else {
-        await api.post('users/', formData);
+        await api.post('users/', payload);
       }
       onRefresh();
       onClose();
