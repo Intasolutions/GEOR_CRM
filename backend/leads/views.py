@@ -188,7 +188,9 @@ class LeadViewSet(viewsets.ModelViewSet):
             for data in leads_data:
                 # IMPORTANT: Remove any 'id' field to prevent UNIQUE constraint collisions
                 data.pop('id', None)
-                import_note = data.pop('import_note', None)
+                import_note_1 = data.pop('import_note_1', None)
+                import_note_2 = data.pop('import_note_2', None)
+                import_note_3 = data.pop('import_note_3', None)
                 
                 email = data.get('email')
                 phone = data.get('phone')
@@ -224,12 +226,17 @@ class LeadViewSet(viewsets.ModelViewSet):
                     if serializer.is_valid():
                         lead_instance = serializer.save()
                         
-                        if import_note:
+                        notes_to_add = []
+                        if import_note_1: notes_to_add.append(f"Stage 1: {import_note_1}")
+                        if import_note_2: notes_to_add.append(f"Stage 2: {import_note_2}")
+                        if import_note_3: notes_to_add.append(f"Stage 3: {import_note_3}")
+
+                        for note_text in notes_to_add:
                             Activity.objects.create(
                                 lead=lead_instance,
                                 user=request.user if request.user.is_authenticated else None,
                                 activity_type='follow_up',
-                                note=f"Imported Note: {import_note}"
+                                note=note_text
                             )
 
                         if existing_lead:

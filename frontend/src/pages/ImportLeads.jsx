@@ -43,7 +43,9 @@ const ImportLeads = () => {
     { id: 'phone', label: 'Phone Number', required: false },
     { id: 'company', label: 'Company Name', required: false },
     { id: 'lead_source', label: 'Lead Source', required: false },
-    { id: 'import_note', label: 'Import Note (Added to Activity)', required: false }
+    { id: 'import_note_1', label: 'Activity Note 1 (e.g. Stage 1)', required: false },
+    { id: 'import_note_2', label: 'Activity Note 2 (e.g. Stage 2)', required: false },
+    { id: 'import_note_3', label: 'Activity Note 3 (e.g. Stage 3)', required: false }
   ]);
   const [importStatus, setImportStatus] = useState({ total: 0, completed: 0, skipped: 0, error_count: 0, errors: [] });
   const [loading, setLoading] = useState(false);
