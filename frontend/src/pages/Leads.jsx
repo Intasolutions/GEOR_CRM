@@ -132,7 +132,7 @@ const Leads = () => {
     const targetStage = stages.find(s => s.id === parseInt(targetStageId));
     let lostReason = null;
     
-    if (targetStage && targetStage.name === 'Closed Lost') {
+    if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
       const reason = window.prompt("Please enter the reason for losing these leads (optional):");
       if (reason === null) return; // Cancelled
       lostReason = reason;
@@ -418,6 +418,11 @@ const Leads = () => {
                       }}>
                         {lead.stage_name || 'Inbox'}
                       </span>
+                      {lead.lost_reason && (
+                        <div style={{ marginTop: '6px', fontSize: '11px', color: '#ef4444', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={10} /> {lead.lost_reason}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <button onClick={() => setActiveDropdown(activeDropdown === lead.id ? null : lead.id)} style={{ padding: '8px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer' }}>

@@ -87,7 +87,7 @@ const LeadDetails = () => {
     const targetStage = stages.find(s => s.id === stageId);
     let payload = { stage: stageId };
     
-    if (targetStage && targetStage.name === 'Closed Lost') {
+    if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
       const reason = window.prompt("Please enter the reason for losing this lead (optional):");
       if (reason !== null) {
         payload.lost_reason = reason;
