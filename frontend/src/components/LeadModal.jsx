@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Building, Flag, Megaphone } from 'lucide-react';
 import api from '../api/client';
 
-const LeadModal = ({ isOpen, onClose, onRefresh }) => {
+const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
   const [stages, setStages] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [formData, setFormData] = useState({
@@ -34,7 +34,26 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
         setCustomFields(fieldData);
         setUsers(userData);
         
-        if (stageData.length > 0) {
+        if (editLead) {
+          // Pre-fill the form with existing lead data
+          const customDataMap = {};
+          if (editLead.custom_values) {
+             editLead.custom_values.forEach(cv => {
+                customDataMap[cv.field] = cv.value;
+             });
+          }
+          setFormData({
+            name: editLead.name || '',
+            email: editLead.email || '',
+            phone: editLead.phone || '',
+            company: editLead.company || '',
+            lead_source: editLead.lead_source || '',
+            stage: editLead.stage || (stageData.length > 0 ? stageData[0].id : ''),
+            assigned_to: editLead.assigned_to || '',
+            deal_value: editLead.deal_value || 0,
+            custom_data: customDataMap
+          });
+        } else if (stageData.length > 0) {
           setFormData(prev => ({ ...prev, stage: stageData[0].id }));
         }
       }).catch(err => {
@@ -58,13 +77,18 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
         assigned_to: formData.assigned_to === "" ? null : formData.assigned_to
       };
       
-      await api.post('leads/', submissionData);
-      import('react-hot-toast').then(m => m.toast.success('Lead created successfully!'));
+      if (editLead) {
+        await api.put(`leads/${editLead.id}/`, submissionData);
+        import('react-hot-toast').then(m => m.toast.success('Lead updated successfully!'));
+      } else {
+        await api.post('leads/', submissionData);
+        import('react-hot-toast').then(m => m.toast.success('Lead created successfully!'));
+      }
       onRefresh();
       onClose();
     } catch (err) {
       console.error(err);
-      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to create lead';
+      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : (editLead ? 'Failed to update lead' : 'Failed to create lead');
       import('react-hot-toast').then(m => m.toast.error('Error: ' + errorMsg));
     }
   };
@@ -75,7 +99,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
         <button onClick={onClose} style={{ position: 'absolute', right: '20px', top: '20px', background: 'none', color: 'var(--text-secondary)' }}>
           <X size={20} />
         </button>
-        <h2 style={{ marginBottom: '24px' }}>Create New Lead</h2>
+        <h2 style={{ marginBottom: '24px' }}>{editLead ? 'Edit Lead Details' : 'Create New Lead'}</h2>
         
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
@@ -192,7 +216,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn-primary" style={{ flex: 1 }}>Create Lead</button>
+            <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editLead ? 'Save Changes' : 'Create Lead'}</button>
           </div>
         </form>
       </div>
