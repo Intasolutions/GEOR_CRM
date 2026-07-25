@@ -282,13 +282,13 @@ const Pipeline = () => {
         style={{
           flex: 1,
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
+          flexDirection: 'row',
           gap: '20px',
-          overflowX: isMobile ? 'hidden' : 'auto',
-          overflowY: isMobile ? 'auto' : 'hidden',
+          overflowX: 'auto',
+          overflowY: 'hidden',
           paddingBottom: '20px',
           alignItems: 'stretch',
-          scrollSnapType: isMobile ? 'none' : 'x mandatory',
+          scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           minHeight: 0
         }}>
@@ -303,20 +303,21 @@ const Pipeline = () => {
               onDragLeave={onDragLeave}
               onDrop={(e) => onDrop(e, stage.id)}
               style={{
-                minWidth: isMobile ? '100%' : '320px',
-                maxWidth: isMobile ? '100%' : '320px',
-                flexBasis: isMobile ? 'auto' : '320px',
+                minWidth: isMobile ? '280px' : '320px',
+                maxWidth: isMobile ? '280px' : '320px',
+                flexBasis: isMobile ? '280px' : '320px',
                 background: draggedOverStage === stage.id ? '#f5f3ff' : '#f8fafc',
                 borderRadius: '16px',
                 display: 'flex',
                 flexDirection: 'column',
-                height: isMobile ? 'auto' : '100%',
+                height: '100%',
                 border: draggedOverStage === stage.id ? '2px dashed #7c3aed' : '1px solid #e2e8f0',
                 flexShrink: 0,
-                marginBottom: isMobile ? '24px' : '0',
+                marginBottom: '0',
                 boxShadow: draggedOverStage === stage.id ? '0 8px 24px rgba(124, 58, 237, 0.08)' : 'var(--shadow-sm)',
                 overflow: 'hidden',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                scrollSnapAlign: 'start'
               }}
             >
               {/* Stage Header */}

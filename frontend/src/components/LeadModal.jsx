@@ -70,8 +70,8 @@ const LeadModal = ({ isOpen, onClose, onRefresh }) => {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '500px', position: 'relative' }}>
+    <div className="modal-overlay">
+      <div className="modal-content">
         <button onClick={onClose} style={{ position: 'absolute', right: '20px', top: '20px', background: 'none', color: 'var(--text-secondary)' }}>
           <X size={20} />
         </button>
