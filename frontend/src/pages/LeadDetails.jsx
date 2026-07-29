@@ -78,6 +78,10 @@ const LeadDetails = () => {
       setAssignedTo(leadRes.data.assigned_to || '');
     } catch (err) {
       console.error(err);
+      if (err.response && err.response.status === 404) {
+        import('react-hot-toast').then(m => m.toast.error("This lead is no longer accessible or has been hidden."));
+        navigate('/leads');
+      }
     } finally {
       setLoading(false);
     }
