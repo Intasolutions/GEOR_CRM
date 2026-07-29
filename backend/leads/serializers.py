@@ -122,6 +122,21 @@ class LeadSerializer(serializers.ModelSerializer):
             return (obj.deal_value * obj.stage.probability) / 100
         return 0.00
 
+    def validate(self, data):
+        stage = data.get('stage')
+        if not stage and self.instance:
+            stage = self.instance.stage
+            
+        lost_reason = data.get('lost_reason')
+        if not lost_reason and self.instance:
+            lost_reason = data.get('lost_reason', self.instance.lost_reason)
+
+        if stage and stage.is_final and 'lost' in stage.name.lower():
+            if not lost_reason or not str(lost_reason).strip():
+                raise serializers.ValidationError({"lost_reason": "A reason must be provided when marking a lead as Lost."})
+                
+        return data
+
     def create(self, validated_data):
         custom_data = validated_data.pop('custom_data', {})
         lead = super().create(validated_data)

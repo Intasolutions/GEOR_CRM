@@ -49,10 +49,17 @@ const Leads = () => {
       const stageId = searchParams.get('stage');
       const assignedToId = searchParams.get('assigned_to');
       const atRisk = searchParams.get('at_risk');
+      const missedFollowups = searchParams.get('missed_followups_only');
       let url = `leads/?page=${page}&exclude_final=true`;
+      
+      if (user?.role === 'sales' || user?.role === 'agent') {
+         url += `&user_priority_view=true`;
+      }
+      
       if (stageId) url += `&stage=${stageId}`;
       if (assignedToId) url += `&assigned_to=${assignedToId}`;
       if (atRisk) url += `&at_risk=true`;
+      if (missedFollowups) url += `&missed_followups_only=true`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
       if (dateRange.endDate) url += `&end_date=${dateRange.endDate}`;
@@ -133,9 +140,12 @@ const Leads = () => {
     let lostReason = null;
     
     if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
-      const reason = window.prompt("Please enter the reason for losing these leads (optional):");
-      if (reason === null) return; // Cancelled
-      lostReason = reason;
+      const reason = window.prompt("Please enter the reason for losing these leads (mandatory):");
+      if (reason === null || reason.trim() === '') {
+        import('react-hot-toast').then(m => m.toast.error('A reason is required to mark leads as lost.'));
+        return;
+      }
+      lostReason = reason.trim();
     }
 
     try {
@@ -313,7 +323,7 @@ const Leads = () => {
                   />
                 </div>
                 {user?.role === 'admin' && (
-                  <div style={{ minWidth: '180px', flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+                  <div style={{ minWidth: '180px', flex: 1, display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '42px', padding: '0 16px', borderRadius: '12px', background: searchParams.get('at_risk') ? '#fee2e2' : 'white', border: `1px solid ${searchParams.get('at_risk') ? '#ef4444' : '#e2e8f0'}`, color: searchParams.get('at_risk') ? '#ef4444' : colors.textMain, fontWeight: '600', fontSize: '13px' }}>
                       <input 
                         type="checkbox" 
@@ -327,6 +337,20 @@ const Leads = () => {
                       />
                       <AlertCircle size={16} /> 
                       {searchParams.get('at_risk') ? 'Showing At-Risk Only' : 'Show Not Contacted'}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '42px', padding: '0 16px', borderRadius: '12px', background: searchParams.get('missed_followups_only') ? '#fee2e2' : 'white', border: `1px solid ${searchParams.get('missed_followups_only') ? '#ef4444' : '#e2e8f0'}`, color: searchParams.get('missed_followups_only') ? '#ef4444' : colors.textMain, fontWeight: '600', fontSize: '13px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!searchParams.get('missed_followups_only')} 
+                        onChange={e => {
+                          const newParams = new URLSearchParams(searchParams);
+                          if (e.target.checked) newParams.set('missed_followups_only', 'true'); else newParams.delete('missed_followups_only');
+                          navigate(`/leads?${newParams.toString()}`);
+                        }} 
+                        style={{ display: 'none' }}
+                      />
+                      <Clock size={16} /> 
+                      {searchParams.get('missed_followups_only') ? 'Showing Missed Followups' : 'Missed Followups'}
                     </label>
                   </div>
                 )}

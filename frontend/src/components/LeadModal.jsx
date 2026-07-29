@@ -14,6 +14,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
     stage: '',
     assigned_to: '',
     deal_value: 0,
+    lost_reason: '',
     custom_data: {}
   });
   const [campaigns, setCampaigns] = useState([]);
@@ -51,6 +52,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
             stage: editLead.stage || (stageData.length > 0 ? stageData[0].id : ''),
             assigned_to: editLead.assigned_to || '',
             deal_value: editLead.deal_value || 0,
+            lost_reason: editLead.lost_reason || '',
             custom_data: customDataMap
           });
         } else if (stageData.length > 0) {
@@ -92,6 +94,9 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
       import('react-hot-toast').then(m => m.toast.error('Error: ' + errorMsg));
     }
   };
+
+  const selectedStage = stages.find(s => s.id == formData.stage);
+  const isLostStage = selectedStage && selectedStage.name.toLowerCase().includes('lost');
 
   return (
     <div className="modal-overlay">
@@ -183,6 +188,20 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
               />
             </div>
           </div>
+
+          {isLostStage && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Lost Reason <span style={{ color: '#ef4444' }}>*</span></label>
+              <textarea 
+                required
+                className="glass-input" 
+                style={{ minHeight: '80px', width: '100%', resize: 'vertical' }}
+                value={formData.lost_reason}
+                onChange={e => setFormData({ ...formData, lost_reason: e.target.value })}
+                placeholder="Why was this lead lost?"
+              />
+            </div>
+          )}
 
           {customFields.length > 0 && (
             <div style={{ marginBottom: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>

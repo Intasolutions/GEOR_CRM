@@ -88,12 +88,12 @@ const LeadDetails = () => {
     let payload = { stage: stageId };
     
     if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
-      const reason = window.prompt("Please enter the reason for losing this lead (optional):");
-      if (reason !== null) {
-        payload.lost_reason = reason;
-      } else {
-        return; // Cancelled prompt
+      const reason = window.prompt("Please enter the reason for losing this lead (mandatory):");
+      if (reason === null || reason.trim() === '') {
+        import('react-hot-toast').then(m => m.toast.error('A reason is required to mark a lead as lost.'));
+        return; // Cancelled prompt or empty reason
       }
+      payload.lost_reason = reason.trim();
     }
 
     setUpdatingStage(true);

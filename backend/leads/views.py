@@ -25,7 +25,7 @@ from datetime import timedelta
 
 class LeadViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
-        from django.db.models import Exists, OuterRef, Q, Value, BooleanField, Case, When
+        from django.db.models import Exists, OuterRef, Q, Value, BooleanField, Case, When, IntegerField
         
         user = self.request.user
         profile = getattr(user, 'profile', None)
@@ -43,8 +43,21 @@ class LeadViewSet(viewsets.ModelViewSet):
             scheduled_at__gt=now
         )
         
+        missed_reminders = Reminder.objects.filter(
+            lead=OuterRef('pk'),
+            status__in=['pending', 'due', 'missed'],
+            scheduled_at__lt=now
+        )
+        scheduled_reminders = Reminder.objects.filter(
+            lead=OuterRef('pk'),
+            status__in=['pending', 'due'],
+            scheduled_at__gte=now
+        )
+        
         queryset = queryset.annotate(
-            has_future_reminder=Exists(future_reminders)
+            has_future_reminder=Exists(future_reminders),
+            is_missed=Exists(missed_reminders),
+            is_scheduled=Exists(scheduled_reminders)
         )
         queryset = queryset.annotate(
             is_at_risk=Case(
@@ -97,6 +110,23 @@ class LeadViewSet(viewsets.ModelViewSet):
         at_risk = self.request.query_params.get('at_risk')
         if at_risk == 'true':
             queryset = queryset.filter(is_at_risk=True)
+            
+        missed_followups_only = self.request.query_params.get('missed_followups_only')
+        if missed_followups_only == 'true':
+            queryset = queryset.filter(is_missed=True)
+            
+        user_priority_view = self.request.query_params.get('user_priority_view')
+        if user_priority_view == 'true':
+            queryset = queryset.annotate(
+                sort_order=Case(
+                    When(is_missed=True, then=Value(1)),
+                    When(is_scheduled=True, then=Value(2)),
+                    When(last_contacted_at__isnull=True, then=Value(3)),
+                    default=Value(4),
+                    output_field=IntegerField()
+                )
+            ).order_by('sort_order', '-created_at')
+            return queryset
             
         # Prioritize At-Risk leads first, then chronological
         return queryset.order_by('-is_at_risk', '-created_at')
