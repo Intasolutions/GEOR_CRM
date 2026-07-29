@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Search, Filter, MoreHorizontal, User, Mail, Phone,
   Users, Upload, Trash2, AlertCircle, CheckCircle2, Clock,
-  ChevronRight, ArrowRight, X, Download
+  ChevronRight, ArrowRight, X, Download, Calendar, Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api/client';
