@@ -50,6 +50,7 @@ const Leads = () => {
       const assignedToId = searchParams.get('assigned_to');
       const atRisk = searchParams.get('at_risk');
       const missedFollowups = searchParams.get('missed_followups_only');
+      const pendingFollowups = searchParams.get('pending_followups');
       let url = `leads/?page=${page}&exclude_final=true`;
       
       if (user?.role === 'sales' || user?.role === 'agent') {
@@ -60,6 +61,7 @@ const Leads = () => {
       if (assignedToId) url += `&assigned_to=${assignedToId}`;
       if (atRisk) url += `&at_risk=true`;
       if (missedFollowups) url += `&missed_followups_only=true`;
+      if (pendingFollowups) url += `&pending_followups=true`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
       if (dateRange.endDate) url += `&end_date=${dateRange.endDate}`;
@@ -139,10 +141,10 @@ const Leads = () => {
     const targetStage = stages.find(s => s.id === parseInt(targetStageId));
     let lostReason = null;
     
-    if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
-      const reason = window.prompt("Please enter the reason for losing these leads (mandatory):");
+    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
+      const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
-        import('react-hot-toast').then(m => m.toast.error('A reason is required to mark leads as lost.'));
+        import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));
         return;
       }
       lostReason = reason.trim();
@@ -291,12 +293,18 @@ const Leads = () => {
                 {user?.role === 'admin' && (
                 <div style={{ minWidth: '200px', flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>ASSIGNED TO</label>
-                  <select className="glass-input" style={{ width: '100%', background: 'white' }} value={filters.assigned_to} onChange={e => {
-                    const newParams = new URLSearchParams(searchParams);
-                    if (e.target.value) newParams.set('assigned_to', e.target.value); else newParams.delete('assigned_to');
-                    navigate(`/leads?${newParams.toString()}`);
-                  }}>
+                  <select
+                    className="glass-input"
+                    style={{ width: '100%', background: 'white' }}
+                    value={searchParams.get('assigned_to') || ''}
+                    onChange={e => {
+                      const newParams = new URLSearchParams(searchParams);
+                      if (e.target.value) newParams.set('assigned_to', e.target.value); else newParams.delete('assigned_to');
+                      navigate(`/leads?${newParams.toString()}`);
+                    }}
+                  >
                     <option value="">All Users</option>
+                    <option value="unassigned" style={{ fontWeight: 'bold' }}>Unassigned Leads</option>
                     {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
                   </select>
                 </div>
@@ -351,6 +359,20 @@ const Leads = () => {
                       />
                       <Clock size={16} /> 
                       {searchParams.get('missed_followups_only') ? 'Showing Missed Followups' : 'Missed Followups'}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '42px', padding: '0 16px', borderRadius: '12px', background: searchParams.get('pending_followups') ? '#fef3c7' : 'white', border: `1px solid ${searchParams.get('pending_followups') ? '#f59e0b' : '#e2e8f0'}`, color: searchParams.get('pending_followups') ? '#d97706' : colors.textMain, fontWeight: '600', fontSize: '13px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={!!searchParams.get('pending_followups')} 
+                        onChange={e => {
+                          const newParams = new URLSearchParams(searchParams);
+                          if (e.target.checked) newParams.set('pending_followups', 'true'); else newParams.delete('pending_followups');
+                          navigate(`/leads?${newParams.toString()}`);
+                        }} 
+                        style={{ display: 'none' }}
+                      />
+                      <Calendar size={16} /> 
+                      {searchParams.get('pending_followups') ? 'Showing Pending Followups' : 'Pending Followups'}
                     </label>
                   </div>
                 )}

@@ -82,8 +82,14 @@ class LeadViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(campaign_id=campaign_id)
         if stage_id:
             queryset = queryset.filter(stage_id=stage_id)
-        if assigned_to_id and (user.is_superuser or (profile and profile.role in ['admin', 'manager'])):
+        if assigned_to_id == 'unassigned':
+            queryset = queryset.filter(assigned_to__isnull=True)
+        elif assigned_to_id and (user.is_superuser or (profile and profile.role in ['admin', 'manager'])):
             queryset = queryset.filter(assigned_to_id=assigned_to_id)
+            
+        # Hide lost leads from non-admins
+        if not user.is_superuser and not (profile and profile.role in ['admin', 'manager']):
+            queryset = queryset.exclude(stage__name__icontains='lost')
         if start_date:
             queryset = queryset.filter(created_at__date__gte=start_date)
         if end_date:
@@ -114,6 +120,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         missed_followups_only = self.request.query_params.get('missed_followups_only')
         if missed_followups_only == 'true':
             queryset = queryset.filter(is_missed=True)
+            
+        pending_followups = self.request.query_params.get('pending_followups')
+        if pending_followups == 'true':
+            queryset = queryset.filter(Q(is_scheduled=True) | Q(is_missed=True))
             
         user_priority_view = self.request.query_params.get('user_priority_view')
         if user_priority_view == 'true':

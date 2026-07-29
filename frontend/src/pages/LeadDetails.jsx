@@ -87,10 +87,10 @@ const LeadDetails = () => {
     const targetStage = stages.find(s => s.id === stageId);
     let payload = { stage: stageId };
     
-    if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
-      const reason = window.prompt("Please enter the reason for losing this lead (mandatory):");
+    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
+      const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
-        import('react-hot-toast').then(m => m.toast.error('A reason is required to mark a lead as lost.'));
+        import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));
         return; // Cancelled prompt or empty reason
       }
       payload.lost_reason = reason.trim();
@@ -619,7 +619,7 @@ const LeadDetails = () => {
                       <AlertCircle size={16} />
                     </div>
                     <div>
-                      <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '2px', fontWeight: '600' }}>Lost Reason</p>
+                      <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '2px', fontWeight: '600' }}>Status Reason</p>
                       <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{lead.lost_reason}</p>
                     </div>
                   </div>

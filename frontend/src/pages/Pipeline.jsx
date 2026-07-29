@@ -135,10 +135,10 @@ const Pipeline = () => {
       const targetStage = stages.find(s => s.id === stageId);
       let payload = { stage: stageId };
       
-      if (targetStage && targetStage.name.toLowerCase().includes('lost')) {
-        const reason = window.prompt("Please enter the reason for losing this lead (mandatory):");
+      if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
+        const reason = window.prompt("Please enter the reason (mandatory):");
         if (reason === null || reason.trim() === '') {
-          import('react-hot-toast').then(m => m.toast.error('A reason is required to mark a lead as lost.'));
+          import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));
           // Revert optimistic update
           setLeads(prev => prev.map(l => l.id == leadId ? { ...l, stage: leads.find(old => old.id == leadId)?.stage } : l));
           return;

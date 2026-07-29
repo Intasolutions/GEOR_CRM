@@ -96,7 +96,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
   };
 
   const selectedStage = stages.find(s => s.id == formData.stage);
-  const isLostStage = selectedStage && selectedStage.name.toLowerCase().includes('lost');
+  const isLostStage = selectedStage && (selectedStage.name.toLowerCase().includes('lost') || selectedStage.name.toLowerCase().includes('next intake'));
 
   return (
     <div className="modal-overlay">
@@ -191,14 +191,14 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
 
           {isLostStage && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Lost Reason <span style={{ color: '#ef4444' }}>*</span></label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Status Reason <span style={{ color: '#ef4444' }}>*</span></label>
               <textarea 
                 required
                 className="glass-input" 
                 style={{ minHeight: '80px', width: '100%', resize: 'vertical' }}
                 value={formData.lost_reason}
                 onChange={e => setFormData({ ...formData, lost_reason: e.target.value })}
-                placeholder="Why was this lead lost?"
+                placeholder="Reason for moving to this stage..."
               />
             </div>
           )}
