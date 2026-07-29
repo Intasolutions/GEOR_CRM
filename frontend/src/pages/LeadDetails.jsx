@@ -88,7 +88,7 @@ const LeadDetails = () => {
   };
 
   const handleUpdateLeadStage = async (stageId) => {
-    const targetStage = stages.find(s => s.id === stageId);
+    const targetStage = stages.find(s => s.id == stageId);
     let payload = { stage: stageId };
     
     if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
