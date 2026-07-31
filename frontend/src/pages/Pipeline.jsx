@@ -182,7 +182,7 @@ const Pipeline = () => {
           <Link to="/leads" className="btn-secondary" style={{ flex: isMobile ? 1 : 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}>
             <ListIcon size={16} /> Table
           </Link>
-          {(user?.role === 'admin' || user?.permissions?.leads?.create) && (
+          {user && !['sales', 'agent'].includes(user.role) && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="btn-primary"

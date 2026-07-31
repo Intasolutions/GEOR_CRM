@@ -43,6 +43,7 @@ const LeadDetails = () => {
   
   // Reminder State
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [editingReminderId, setEditingReminderId] = useState(null);
   const [reminderNote, setReminderNote] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -182,14 +183,18 @@ const LeadDetails = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = async (e, isRecording = false) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('lead', id);
-    formData.append('file_name', file.name);
+    let finalName = file.name;
+    if (isRecording) {
+      finalName = `[Recording] ${finalName}`;
+    }
+    formData.append('file_name', finalName);
     formData.append('file_size', file.size);
 
     setUploading(true);
@@ -275,18 +280,39 @@ const LeadDetails = () => {
     e.preventDefault();
     if (!reminderNote || !reminderDate) return;
     try {
-      await api.post('reminders/', {
+      const payload = {
         lead: id,
         note: reminderNote,
         scheduled_at: new Date(reminderDate).toISOString()
-      });
+      };
+      
+      if (editingReminderId) {
+        await api.patch(`reminders/${editingReminderId}/`, payload);
+      } else {
+        await api.post('reminders/', payload);
+      }
+      
       setShowReminderModal(false);
+      setEditingReminderId(null);
       setReminderNote('');
       setReminderDate('');
       fetchData();
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const openEditReminder = (rem) => {
+    setEditingReminderId(rem.id);
+    setReminderNote(rem.note || '');
+    if (rem.scheduled_at) {
+      // Format as YYYY-MM-DDThh:mm
+      const dateObj = new Date(rem.scheduled_at);
+      const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(dateObj - tzoffset)).toISOString().slice(0, 16);
+      setReminderDate(localISOTime);
+    }
+    setShowReminderModal(true);
   };
 
   const handleToggleReminderStatus = async (reminderId, newStatus) => {
@@ -386,12 +412,14 @@ const LeadDetails = () => {
                     <Edit3 size={16} /> Edit Details
                   </button>
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
-                  <button 
-                    onClick={handleDeleteLead}
-                    style={{ width: '100%', border: 'none', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
-                  >
-                    <Trash2 size={16} /> Delete Lead
-                  </button>
+                  {user && !['sales', 'agent'].includes(user.role) && (
+                    <button 
+                      onClick={handleDeleteLead}
+                      style={{ width: '100%', border: 'none', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--danger)', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={16} /> Delete Lead
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -721,10 +749,16 @@ const LeadDetails = () => {
               <h3 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Paperclip size={16} color="var(--brand-blue)" /> Documents
               </h3>
-              <label style={{ cursor: 'pointer', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Plus size={14} /> Upload
-                <input type="file" hidden onChange={handleFileUpload} disabled={uploading} />
-              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <label style={{ cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Phone size={14} /> Upload Recording
+                  <input type="file" accept="audio/*,video/*" hidden onChange={(e) => handleFileUpload(e, true)} disabled={uploading} />
+                </label>
+                <label style={{ cursor: 'pointer', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Plus size={14} /> Upload
+                  <input type="file" hidden onChange={(e) => handleFileUpload(e, false)} disabled={uploading} />
+                </label>
+              </div>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1135,6 +1169,11 @@ const LeadDetails = () => {
                               Task
                             </span>
                           </div>
+                          {rem.status === 'pending' && (
+                            <button onClick={() => openEditReminder(rem)} style={{ background: 'none', border: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Edit3 size={12} /> Edit
+                            </button>
+                          )}
                         </div>
                         <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: '1.4', textDecoration: rem.status === 'completed' ? 'line-through' : 'none', paddingLeft: '24px' }}>{rem.note}</p>
                         <div style={{ fontSize: '11px', fontWeight: '600', color: rem.status === 'completed' ? 'var(--text-secondary)' : 'var(--brand-blue)', display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '24px' }}>
@@ -1158,7 +1197,7 @@ const LeadDetails = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowReminderModal(false)}
+              onClick={() => { setShowReminderModal(false); setEditingReminderId(null); setReminderNote(''); setReminderDate(''); }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }} 
             />
             <motion.div 
@@ -1168,7 +1207,7 @@ const LeadDetails = () => {
               className="glass-card" 
               style={{ width: '420px', padding: '32px', position: 'relative', zIndex: 1001, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
             >
-              <h3 style={{ fontSize: '20px', marginBottom: '8px', fontWeight: '700' }}>Schedule Follow-up</h3>
+              <h3 style={{ fontSize: '20px', marginBottom: '8px', fontWeight: '700' }}>{editingReminderId ? 'Edit Follow-up' : 'Schedule Follow-up'}</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Set a reminder to keep this lead moving through your pipeline.</p>
               
               <form onSubmit={handleScheduleReminder}>
@@ -1195,7 +1234,7 @@ const LeadDetails = () => {
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button type="button" onClick={() => setShowReminderModal(false)} className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }}>
+                  <button type="button" onClick={() => { setShowReminderModal(false); setEditingReminderId(null); setReminderNote(''); setReminderDate(''); }} className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }}>
                     Cancel
                   </button>
                   <button type="submit" className="btn-primary" style={{ padding: '10px 24px', borderRadius: '8px' }}>

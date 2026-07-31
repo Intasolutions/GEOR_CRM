@@ -141,6 +141,10 @@ STATICFILES_DIRS = [
     # Add any extra static paths here if needed
 ]
 
+import os
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # REST Framework configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

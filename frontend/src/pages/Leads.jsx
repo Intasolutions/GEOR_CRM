@@ -237,9 +237,11 @@ const Leads = () => {
               <Upload size={18} /> Import
             </button>
           )}
-          <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Plus size={20} /> Create Lead
-          </button>
+          {user && !['sales', 'agent'].includes(user.role) && (
+            <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <Plus size={20} /> Create Lead
+            </button>
+          )}
         </div>
       </header>
 
@@ -521,7 +523,9 @@ const Leads = () => {
                 <button onClick={() => setIsBulkAssignModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Assign User</button>
               )}
               <button onClick={() => setIsBulkStageModalOpen(true)} className="btn-secondary" style={{ height: '32px', fontSize: '12px', background: 'white' }}>Update Stage</button>
-              <button onClick={handleBulkDelete} style={{ height: '32px', fontSize: '12px', background: '#ef4444', color: 'white', border: 'none' }}>Delete</button>
+              {user && !['sales', 'agent'].includes(user.role) && (
+                <button onClick={handleBulkDelete} style={{ height: '32px', fontSize: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Delete</button>
+              )}
             </div>
             <button onClick={() => setSelectedLeads([])} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}><X size={18} /></button>
           </motion.div>

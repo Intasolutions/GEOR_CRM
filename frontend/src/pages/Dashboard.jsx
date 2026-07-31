@@ -543,7 +543,7 @@ const Dashboard = () => {
                          <Target size={12} /> {rem.lead_name || 'Lead'}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={12} /> {new Date(rem.scheduled_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        <Clock size={12} /> {new Date(rem.scheduled_at).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                       </div>
                     </div>
                   </div>

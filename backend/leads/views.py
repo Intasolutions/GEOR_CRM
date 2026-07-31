@@ -30,11 +30,16 @@ class LeadViewSet(viewsets.ModelViewSet):
         user = self.request.user
         profile = getattr(user, 'profile', None)
         
-        # Base queryset - Role Scoping (Sales users only view assigned leads or leads in their assigned campaigns)
-        if user.is_superuser or (profile and profile.role and profile.role.lower() in ['admin', 'manager']):
-            queryset = Lead.objects.all()
-        else:
+        is_sales_or_agent = profile and profile.role in ['sales', 'agent']
+        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
+
+        # Base queryset - Role Scoping
+        if is_sales_or_agent or not is_admin_or_manager:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
+            # Hide lost and next intake leads from sales users
+            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake'))
+        else:
+            queryset = Lead.objects.all()
 
         # Annotate with 'is_at_risk' (Contacted or beyond 'New' stage, but no future reminder)
         now = timezone.now()
@@ -87,9 +92,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         elif assigned_to_id and (user.is_superuser or (profile and profile.role in ['admin', 'manager'])):
             queryset = queryset.filter(assigned_to_id=assigned_to_id)
             
-        # Hide lost leads from non-admins
-        if not user.is_superuser and not (profile and profile.role in ['admin', 'manager']):
-            queryset = queryset.exclude(stage__name__icontains='lost')
+
         if start_date:
             queryset = queryset.filter(created_at__date__gte=start_date)
         if end_date:
@@ -138,8 +141,14 @@ class LeadViewSet(viewsets.ModelViewSet):
             ).order_by('sort_order', '-created_at')
             return queryset
             
-        # Prioritize At-Risk leads first, then chronological
-        return queryset.order_by('-is_at_risk', '-created_at')
+        # Reminder section sorting requirement:
+        # First leads without next schedule date, then leads accordingly to schedule date and time
+        from django.db.models import Min, F
+        queryset = queryset.annotate(
+            next_schedule_date=Min('reminders__scheduled_at', filter=Q(reminders__status='pending'))
+        ).order_by(F('next_schedule_date').asc(nulls_first=True), '-created_at')
+        
+        return queryset
 
     serializer_class = LeadSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -156,6 +165,12 @@ class LeadViewSet(viewsets.ModelViewSet):
         return super().paginate_queryset(queryset)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+        if profile and profile.role in ['sales', 'agent']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to create leads.")
+            
         lead = serializer.save()
         LeadAuditLog.objects.create(
             lead=lead,
@@ -165,6 +180,14 @@ class LeadViewSet(viewsets.ModelViewSet):
         )
         # Trigger Workflows
         process_workflows(lead, trigger_type='lead_created', user=self.request.user)
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+        if profile and profile.role in ['sales', 'agent']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to delete leads.")
+        super().perform_destroy(instance)
 
     def perform_update(self, serializer):
         old_instance = self.get_object()
