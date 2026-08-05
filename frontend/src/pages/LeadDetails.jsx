@@ -88,8 +88,33 @@ const LeadDetails = () => {
     }
   };
 
+  const isStageUpdateDisabled = (targetStage) => {
+    if (!lead || !user || !targetStage) return false;
+    const isSalesOrAgent = ['sales', 'agent'].includes(user.role);
+    if (!isSalesOrAgent) return false; // Admins and managers can do anything
+    
+    // Find lead's current stage object
+    const currentStageObj = stages.find(s => s.id === lead.stage);
+    if (!currentStageObj) return false;
+
+    // Check if it's a special stage (Lost, Next Intake, Domestic)
+    const SPECIAL_STAGES = ['lost', 'next intake', 'domestic'];
+    const targetNameLower = targetStage.name.toLowerCase();
+    const isSpecial = SPECIAL_STAGES.some(s => targetNameLower.includes(s));
+
+    if (isSpecial) return false; // Special stages are always selectable
+
+    // Only allow immediate next stage (current order + 1)
+    return targetStage.order !== currentStageObj.order + 1;
+  };
+
   const handleUpdateLeadStage = async (stageId) => {
     const targetStage = stages.find(s => s.id == stageId);
+    if (isStageUpdateDisabled(targetStage)) {
+      toast.error("You can only move to the next sequential stage.");
+      return;
+    }
+
     let payload = { stage: stageId };
     
     if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
@@ -108,10 +133,18 @@ const LeadDetails = () => {
       fetchData();
     } catch (err) {
       console.error(err);
+      if (err.response && err.response.data && err.response.data.detail) {
+        toast.error(err.response.data.detail);
+      } else if (err.response && err.response.data && err.response.data.non_field_errors) {
+        toast.error(err.response.data.non_field_errors[0]);
+      } else {
+        toast.error("Failed to update stage");
+      }
     } finally {
       setUpdatingStage(false);
     }
   };
+
 
   const handleUpdateDealValue = async () => {
     try {
@@ -381,27 +414,29 @@ const LeadDetails = () => {
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
                   <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', padding: '8px 12px', textTransform: 'uppercase', margin: 0 }}>Change Stage</p>
                   <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                    {stages.map(s => (
-                      <button 
-                        key={s.id}
-                        onClick={() => handleUpdateLeadStage(s.id)}
-                        disabled={updatingStage || lead.stage === s.id}
-                        style={{ 
-                          width: '100%', 
-                          textAlign: 'left', 
-                          padding: '8px 12px', 
-                          background: lead.stage === s.id ? 'var(--bg-tertiary)' : 'none', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '10px', 
-                          fontSize: '13px', 
-                          color: lead.stage === s.id ? 'var(--brand-blue)' : 'var(--text-primary)',
-                          fontWeight: lead.stage === s.id ? '700' : '400',
-                          border: 'none',
-                          cursor: (updatingStage || lead.stage === s.id) ? 'default' : 'pointer',
-                          opacity: updatingStage ? 0.7 : 1
-                        }}
-                      >
+                    {stages.map(s => {
+                      const isDisabled = updatingStage || lead.stage === s.id || isStageUpdateDisabled(s);
+                      return (
+                        <button 
+                          key={s.id}
+                          onClick={() => handleUpdateLeadStage(s.id)}
+                          disabled={isDisabled}
+                          style={{ 
+                            width: '100%', 
+                            textAlign: 'left', 
+                            padding: '8px 12px', 
+                            background: lead.stage === s.id ? 'var(--bg-tertiary)' : 'none', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '10px', 
+                            fontSize: '13px', 
+                            color: lead.stage === s.id ? 'var(--brand-blue)' : 'var(--text-primary)',
+                            fontWeight: lead.stage === s.id ? '700' : '400',
+                            border: 'none',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                            opacity: isDisabled && lead.stage !== s.id ? 0.4 : 1
+                          }}
+                        >
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color || 'var(--brand-blue)' }} />
                         {s.name}
                       </button>
@@ -528,7 +563,11 @@ const LeadDetails = () => {
                     }}
                   >
                     {stages.map((s) => (
-                      <option key={s.id} value={s.id}>
+                      <option 
+                        key={s.id} 
+                        value={s.id}
+                        disabled={lead.stage !== s.id && isStageUpdateDisabled(s)}
+                      >
                         {s.name}
                       </option>
                     ))}

@@ -158,7 +158,11 @@ const Leads = () => {
       fetchLeads(pagination.current);
       setSelectedLeads([]);
       setIsBulkStageModalOpen(false);
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err); 
+      const errorMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.detail || "Failed to update one or more leads. Please check stage sequence constraints.";
+      import('react-hot-toast').then(m => m.toast.error(errorMsg));
+    }
   };
 
   const handleBulkAssignUser = async () => {

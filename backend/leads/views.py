@@ -193,7 +193,35 @@ class LeadViewSet(viewsets.ModelViewSet):
         old_instance = self.get_object()
         old_stage = old_instance.stage
         old_deal_value = old_instance.deal_value
-        
+
+        # ── Sequential Stage Enforcement for Sales/Agent users ─────────────────
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+        is_sales_or_agent = profile and profile.role in ['sales', 'agent']
+
+        new_stage_id = serializer.validated_data.get('stage', old_stage)
+        if hasattr(new_stage_id, 'id'):
+            new_stage_obj = new_stage_id
+        else:
+            new_stage_obj = old_stage  # unchanged
+
+        if is_sales_or_agent and new_stage_obj and old_stage and new_stage_obj != old_stage:
+            # Special exit stages are always allowed
+            SPECIAL_STAGES = ['lost', 'next intake', 'domestic']
+            new_stage_name_lower = new_stage_obj.name.lower()
+            is_special = any(s in new_stage_name_lower for s in SPECIAL_STAGES)
+
+            if not is_special:
+                # Only allow moving to the immediate next stage (order + 1)
+                if new_stage_obj.order != old_stage.order + 1:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        f"You can only move to the next stage. "
+                        f"Current stage is '{old_stage.name}' (Order {old_stage.order}). "
+                        f"Next allowed stage is Order {old_stage.order + 1}."
+                    )
+        # ───────────────────────────────────────────────────────────────────────
+
         new_instance = serializer.save()
         new_stage = new_instance.stage
         new_deal_value = new_instance.deal_value
@@ -225,6 +253,7 @@ class LeadViewSet(viewsets.ModelViewSet):
                 old_value=str(old_deal_value),
                 new_value=str(new_deal_value)
             )
+
 
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):
