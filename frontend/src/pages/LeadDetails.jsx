@@ -92,7 +92,7 @@ const LeadDetails = () => {
     const targetStage = stages.find(s => s.id == stageId);
     let payload = { stage: stageId };
     
-    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
+    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
       const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
         import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));
@@ -645,17 +645,26 @@ const LeadDetails = () => {
                   </div>
                 </div>
 
-                {lead.lost_reason && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginTop: '8px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
-                      <AlertCircle size={16} />
+                {lead.lost_reason && (() => {
+                  const stageName = lead.stage_name?.toLowerCase() || '';
+                  const isDomestic = stageName.includes('domestic');
+                  const isNextIntake = stageName.includes('next intake');
+                  const bgColor = isDomestic ? '#dbeafe' : isNextIntake ? '#fef3c7' : '#fee2e2';
+                  const iconColor = isDomestic ? '#3b82f6' : isNextIntake ? '#f59e0b' : '#ef4444';
+                  const label = isDomestic ? 'Domestic Reason' : isNextIntake ? 'Next Intake Reason' : 'Lost Reason';
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginTop: '8px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: iconColor }}>
+                        <AlertCircle size={16} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '12px', color: iconColor, marginBottom: '2px', fontWeight: '600' }}>{label}</p>
+                        <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{lead.lost_reason}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '2px', fontWeight: '600' }}>Status Reason</p>
-                      <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>{lead.lost_reason}</p>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
+
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-blue)' }}>

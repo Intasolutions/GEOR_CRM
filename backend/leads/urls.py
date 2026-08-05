@@ -4,7 +4,7 @@ from .views import (
     ReminderViewSet, UserViewSet, CustomFieldViewSet, CampaignViewSet,
     LeadDocumentViewSet, IntegrationViewSet, WorkflowViewSet, WorkflowLogViewSet,
     CallRecordViewSet, InternalTaskViewSet, QuotationViewSet, QuotationItemViewSet,
-    LeadAuditLogViewSet
+    LeadAuditLogViewSet, SheetImportView
 )
 from rest_framework.routers import DefaultRouter
 
@@ -26,4 +26,7 @@ router.register(r'call-records', CallRecordViewSet, basename='call-record')
 router.register(r'internal-tasks', InternalTaskViewSet, basename='internal-task')
 router.register(r'audit-logs', LeadAuditLogViewSet, basename='audit-log')
 
-urlpatterns = router.urls
+urlpatterns = router.urls + [
+    path('leads/sheet_import/', SheetImportView.as_view(), name='sheet-import'),
+]
+

@@ -141,7 +141,7 @@ const Leads = () => {
     const targetStage = stages.find(s => s.id === parseInt(targetStageId));
     let lostReason = null;
 
-    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake'))) {
+    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
       const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
         import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));

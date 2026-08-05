@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import IntegrationModal from '../components/IntegrationModal';
+import GoogleSheetsModal from '../components/GoogleSheetsModal';
+
 
 const IntegrationCard = ({ icon: Icon, title, description, connected, color, delay, onToggle, loading }) => (
   <motion.div 
@@ -108,6 +110,7 @@ const Integrations = () => {
   const [loading, setLoading] = React.useState(true);
   const [togglingProvider, setTogglingProvider] = React.useState(null);
   const [selectedProvider, setSelectedProvider] = React.useState(null);
+  const [sheetsModalOpen, setSheetsModalOpen] = React.useState(false);
 
   const fetchIntegrations = async () => {
     try {
@@ -125,6 +128,12 @@ const Integrations = () => {
   }, []);
 
   const handleToggle = async (providerId) => {
+    // Google Sheets has its own dedicated setup modal
+    if (providerId === 'sheets') {
+      setSheetsModalOpen(true);
+      return;
+    }
+
     const statusEntry = integrations.find(i => i.provider === providerId);
     const isConnected = statusEntry ? statusEntry.is_connected : false;
 
@@ -289,6 +298,12 @@ const Integrations = () => {
         isOpen={!!selectedProvider}
         onClose={() => setSelectedProvider(null)}
         provider={selectedProvider}
+        onRefresh={fetchIntegrations}
+      />
+
+      <GoogleSheetsModal
+        isOpen={sheetsModalOpen}
+        onClose={() => setSheetsModalOpen(false)}
         onRefresh={fetchIntegrations}
       />
     </div>

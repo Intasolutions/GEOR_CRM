@@ -36,8 +36,8 @@ class LeadViewSet(viewsets.ModelViewSet):
         # Base queryset - Role Scoping
         if is_sales_or_agent or not is_admin_or_manager:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
-            # Hide lost and next intake leads from sales users
-            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake'))
+            # Hide lost, next intake and domestic leads from sales users
+            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake') | Q(stage__name__icontains='domestic'))
         else:
             queryset = Lead.objects.all()
 
@@ -835,3 +835,131 @@ class QuotationItemViewSet(viewsets.ModelViewSet):
         quotation = instance.quotation
         instance.delete()
         quotation.calculate_totals()
+
+
+# ─── Google Sheets Auto-Import Endpoint ───────────────────────────────────────
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+import secrets
+
+class SheetImportView(APIView):
+    """
+    Called by Google Apps Script when a new row is added to the linked sheet.
+    Authenticated via X-Import-Token header — no JWT needed.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .models_integrations import IntegrationSetting
+        from .models import CustomField, LeadCustomFieldValue, Activity, LeadStage
+
+        # ── 1. Authenticate via token ──────────────────────────────────────────
+        token = request.headers.get('X-Import-Token') or request.data.get('import_token')
+        try:
+            integration = IntegrationSetting.objects.get(provider='sheets')
+        except IntegrationSetting.DoesNotExist:
+            return Response({'error': 'Google Sheets integration not configured.'}, status=400)
+
+        saved_token = integration.config_data.get('import_token')
+        if not saved_token or token != saved_token:
+            return Response({'error': 'Invalid import token.'}, status=401)
+
+        if not integration.is_connected:
+            return Response({'error': 'Google Sheets integration is disabled.'}, status=403)
+
+        # ── 2. Parse incoming row data ─────────────────────────────────────────
+        data = request.data
+        name  = str(data.get('Name', '') or '').strip()
+        phone = str(data.get('Phone', '') or data.get('phone', '') or '').strip()
+        email = str(data.get('Email', '') or data.get('email', '') or '').strip()
+
+        if not name:
+            return Response({'status': 'skipped', 'reason': 'No name provided'}, status=200)
+
+        # ── 3. Duplicate check (phone or email) ────────────────────────────────
+        from django.db.models import Q as DQ
+        existing = None
+        if email and email.lower() not in ['', 'na', 'n/a', 'none']:
+            existing = Lead.objects.filter(email=email).first()
+        if not existing and phone:
+            existing = Lead.objects.filter(phone=phone).first()
+
+        if existing:
+            return Response({'status': 'duplicate', 'lead_id': existing.id}, status=200)
+
+        # ── 4. Get default stage (first by order) ──────────────────────────────
+        config = integration.config_data
+        default_stage_id = config.get('default_stage_id')
+        if default_stage_id:
+            stage = LeadStage.objects.filter(id=default_stage_id).first()
+        else:
+            stage = LeadStage.objects.order_by('order').first()
+
+        # ── 5. Create the Lead ─────────────────────────────────────────────────
+        lead = Lead.objects.create(
+            name=name,
+            phone=phone or None,
+            email=email or None,
+            lead_source='Google Sheets / Meta Ads',
+            stage=stage,
+            assigned_to=None,  # Left for admin to assign
+        )
+
+        # ── 6. Save custom fields: District, Qualification, Age ────────────────
+        custom_field_map = {
+            'District':      ('district',      'text'),
+            'Qualification': ('qualification', 'text'),
+            'Age':           ('age',           'text'),
+        }
+        for sheet_col, (slug, ftype) in custom_field_map.items():
+            val = str(data.get(sheet_col, '') or '').strip()
+            if not val:
+                continue
+            cf, _ = CustomField.objects.get_or_create(
+                name=slug,
+                defaults={'label': sheet_col, 'field_type': ftype}
+            )
+            LeadCustomFieldValue.objects.create(lead=lead, field=cf, value=val)
+
+        # ── 7. Create Activity notes for Feedback columns ──────────────────────
+        feedback_cols = [
+            ('Feedback 1(Initial Response)', 'call'),
+            ('Feedback 2 (Call Response)',   'follow_up'),
+            ('Final Feedback',               'follow_up'),
+        ]
+        # Also handle alternative spellings from the sheet
+        feedback_aliases = [
+            (['Feedback 1(Initial Response)', 'Feedback 1', 'Feedback1'], 'call'),
+            (['Feedback 2 (Call Response)',   'Feedback 2', 'Feedback2'], 'follow_up'),
+            (['Final Feedback',               'FinalFeedback'],           'follow_up'),
+        ]
+        for aliases, atype in feedback_aliases:
+            note = None
+            for alias in aliases:
+                val = str(data.get(alias, '') or '').strip()
+                if val:
+                    note = val
+                    break
+            if note:
+                # Use first superuser as fallback activity user
+                from django.contrib.auth.models import User as DjangoUser
+                system_user = DjangoUser.objects.filter(is_superuser=True).first()
+                if system_user:
+                    Activity.objects.create(
+                        lead=lead,
+                        user=system_user,
+                        activity_type=atype,
+                        note=f"[Sheet Import] {note}"
+                    )
+
+        # ── 8. Update last_sync timestamp ──────────────────────────────────────
+        from django.utils import timezone as tz
+        integration.last_sync = tz.now()
+        integration.save(update_fields=['last_sync'])
+
+        return Response({'status': 'created', 'lead_id': lead.id, 'name': lead.name}, status=201)
+
+    def get(self, request):
+        """Health check — for testing the endpoint is reachable."""
+        return Response({'status': 'ok', 'message': 'Google Sheets import endpoint is active.'})
+

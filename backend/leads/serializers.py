@@ -131,7 +131,7 @@ class LeadSerializer(serializers.ModelSerializer):
         if not lost_reason and self.instance:
             lost_reason = data.get('lost_reason', self.instance.lost_reason)
 
-        if stage and ('lost' in stage.name.lower() or 'next intake' in stage.name.lower()):
+        if stage and ('lost' in stage.name.lower() or 'next intake' in stage.name.lower() or 'domestic' in stage.name.lower()):
             if not lost_reason or not str(lost_reason).strip():
                 raise serializers.ValidationError({"lost_reason": "A reason must be provided when moving to this stage."})
                 
