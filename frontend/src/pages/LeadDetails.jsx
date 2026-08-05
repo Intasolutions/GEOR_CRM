@@ -439,8 +439,9 @@ const LeadDetails = () => {
                         >
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color || 'var(--brand-blue)' }} />
                         {s.name}
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
                   <button onClick={() => setIsEditModalOpen(true)} style={{ width: '100%', border: 'none', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' }}>
