@@ -289,13 +289,97 @@ const Dashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-       <div className="stat-grid" style={{ marginBottom: '32px' }}>
+      <div className="stat-grid" style={{ marginBottom: '32px' }}>
         <StatCard icon={Users} title="Total Leads" value={stats.totalLeads} trend="+12.4% MoM" />
         <StatCard icon={TrendingUp} title="Pipeline Value" value={`₹${stats.pipelineValue.toLocaleString('en-IN')}`} trend="+₹12.5k" />
         <StatCard icon={Target} title="Win Rate" value={stats.winRate} trend="Optimal" />
         <StatCard icon={Clock} title="Due Follow-ups" value={stats.pendingFollowups} trend="Action Required" />
       </div>
+
+      {/* Leads Missing Follow-up Section */}
+      <div className="glass-card" style={{ padding: '32px', marginBottom: '32px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Leads Missing Follow-up</h2>
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px', margin: 0 }}>Active leads that currently have no future follow-up dates or reminders scheduled</p>
+          </div>
+          <div style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(239, 68, 68, 0.08)', padding: '6px 14px', borderRadius: '20px', color: '#ef4444' }}>
+            {leads.filter(l => !l.is_final && l.is_at_risk).length} Need Attention
+          </div>
+        </div>
+
+        {leads.filter(l => !l.is_final && l.is_at_risk).length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', margin: '0 auto 16px' }}>
+              <CheckCircle2 size={24} />
+            </div>
+            <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', margin: '0 0 4px' }}>All active leads are covered!</p>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Every active lead has a follow-up scheduled.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto', margin: '0 -32px', padding: '0 32px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <th style={{ padding: '12px 16px' }}>Lead Name</th>
+                  <th style={{ padding: '12px 16px' }}>Current Stage</th>
+                  <th style={{ padding: '12px 16px' }}>Contact Information</th>
+                  {(!user || ['admin', 'manager'].includes(user.role)) && <th style={{ padding: '12px 16px' }}>Assigned Rep</th>}
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leads.filter(l => !l.is_final && l.is_at_risk).slice(0, 5).map(l => {
+                  const stageObj = stages.find(s => s.id === l.stage);
+                  const stageColor = stageObj?.color || '#3b82f6';
+                  return (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #e2e8f0', fontSize: '14px', transition: 'background 0.2s' }} className="table-row-hover">
+                      <td style={{ padding: '16px' }}>
+                        <div style={{ fontWeight: '700', color: '#0f172a' }}>{l.name}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Source: {l.lead_source || 'Direct'}</div>
+                      </td>
+                      <td style={{ padding: '16px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '12px', background: `${stageColor}12`, color: stageColor, display: 'inline-block' }}>
+                          {l.stage_name}
+                        </span>
+                      </td>
+                      <td style={{ padding: '16px' }}>
+                        <div style={{ color: '#334155', fontWeight: '600' }}>{l.phone || 'No phone'}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{l.email || 'No email'}</div>
+                      </td>
+                      {(!user || ['admin', 'manager'].includes(user.role)) && (
+                        <td style={{ padding: '16px', color: '#475569', fontWeight: '500' }}>
+                          {l.assigned_to_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Unassigned</span>}
+                        </td>
+                      )}
+                      <td style={{ padding: '16px', textAlign: 'right' }}>
+                        <button
+                          onClick={() => navigate(`/leads/${l.id}`)}
+                          className="btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '8px', background: 'var(--brand-blue)', display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: '600' }}
+                        >
+                          Schedule Follow-up <ArrowRight size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {leads.filter(l => !l.is_final && l.is_at_risk).length > 5 && (
+              <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  onClick={() => navigate('/leads')}
+                  style={{ background: 'none', border: 'none', color: 'var(--brand-blue)', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  View All {leads.filter(l => !l.is_final && l.is_at_risk).length} Leads Need Attention →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
 
       {/* New Visual Intelligence Grid */}
       <div className="dashboard-grid" style={{ marginBottom: '40px' }}>
