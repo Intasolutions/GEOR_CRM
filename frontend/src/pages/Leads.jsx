@@ -220,7 +220,7 @@ const Leads = () => {
             </div>
             <div style={{ fontWeight: '800', color: colors.primary, fontSize: '12px' }}>{lead.lead_score}%</div>
           </div>
-          <div style={{ fontSize: '13px', color: colors.textSub, marginBottom: '12px' }}>{lead.company || 'No Company'}</div>
+          <div style={{ fontSize: '13px', color: colors.textSub, marginBottom: '12px' }}>{lead.company || 'No Course'}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <StatusBadge isAtRisk={lead.is_at_risk} lastContacted={lead.last_contacted_at} isFinal={lead.is_final} />
             <Link to={`/leads/${lead.id}`}><ChevronRight size={18} color={colors.textSub} /></Link>
@@ -271,7 +271,7 @@ const Leads = () => {
             <input
               type="text"
               className="glass-input"
-              placeholder="Search by name, phone, company or email..."
+              placeholder="Search by name, phone, course or email..."
               style={{ paddingLeft: '44px', width: '100%', height: '48px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -461,7 +461,7 @@ const Leads = () => {
                         </div>
                         <div>
                           <Link to={`/leads/${lead.id}`} style={{ fontWeight: '700', color: '#0f172a', fontSize: '14.5px', textDecoration: 'none' }} onMouseEnter={e => e.currentTarget.style.color = '#7c3aed'} onMouseLeave={e => e.currentTarget.style.color = '#0f172a'}>{lead.name}</Link>
-                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>{lead.company || 'Private Individual'}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>{lead.company || 'No Course'}</div>
                         </div>
                       </div>
                     </td>

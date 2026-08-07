@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -47,6 +47,79 @@ const LeadDetails = () => {
   const [reminderNote, setReminderNote] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  const timelineItems = useMemo(() => {
+    const items = [];
+    
+    // Add activities
+    activities.forEach(act => {
+      items.push({
+        id: `activity-${act.id}`,
+        type: 'activity',
+        timestamp: act.timestamp,
+        activity_type: act.activity_type,
+        note: act.note,
+        raw: act
+      });
+    });
+    
+    // Add documents
+    documents.forEach(doc => {
+      const isRecording = (doc.file_name || '').startsWith('[Recording]');
+      items.push({
+        id: `doc-${doc.id}`,
+        type: 'document',
+        timestamp: doc.uploaded_at,
+        activity_type: isRecording ? 'call' : 'document',
+        note: isRecording 
+          ? `Uploaded call recording: ${doc.file_name.replace('[Recording]', '').trim()}`
+          : `Uploaded document: ${doc.file_name}`,
+        file_url: doc.file,
+        file_name: doc.file_name,
+        file_size: doc.file_size,
+        is_recording: isRecording,
+        raw: doc
+      });
+    });
+    
+    // Sort descending by timestamp
+    return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [activities, documents]);
+
+  const callTimelineItems = useMemo(() => {
+    const items = [];
+    
+    // Add VoIP calls
+    if (lead?.call_records) {
+      lead.call_records.forEach(call => {
+        items.push({
+          id: `call-${call.id}`,
+          type: 'voip',
+          timestamp: call.timestamp,
+          duration: call.duration,
+          recording_url: call.recording_url,
+          summary: call.summary,
+          raw: call
+        });
+      });
+    }
+    
+    // Add uploaded call recordings
+    documents.filter(doc => (doc.file_name || '').startsWith('[Recording]')).forEach(doc => {
+      items.push({
+        id: `doc-call-${doc.id}`,
+        type: 'uploaded_call',
+        timestamp: doc.uploaded_at,
+        file_name: doc.file_name.replace('[Recording]', '').trim(),
+        file_url: doc.file,
+        file_size: doc.file_size,
+        raw: doc
+      });
+    });
+    
+    // Sort descending by timestamp
+    return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [lead?.call_records, documents]);
 
   useEffect(() => {
     fetchData();
@@ -670,7 +743,7 @@ const LeadDetails = () => {
                     <Building size={16} />
                   </div>
                   <div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Company</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Course</p>
                     <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.company || '—'}</p>
                   </div>
                 </div>
@@ -965,21 +1038,22 @@ const LeadDetails = () => {
               <AnimatePresence mode="wait">
                 {activeTab === 'activity' ? (
                   <motion.div key="interactions" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
-                    {activities.length === 0 ? (
+                    {timelineItems.length === 0 ? (
                       <div className="glass-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                         No interactions recorded yet.
                       </div>
                     ) : (
-                      activities.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map((act) => {
+                      timelineItems.map((item) => {
                         const config = {
                           call: { color: '#3b82f6', icon: PhoneCall, label: 'Call Log' },
                           email: { color: '#6366f1', icon: MailCheck, label: 'Email Outreach' },
                           meeting: { color: '#10b981', icon: Calendar, label: 'Meeting' },
-                          task: { color: '#f59e0b', icon: CheckCircle2, label: 'Note' }
-                        }[act.activity_type] || { color: 'var(--text-secondary)', icon: FileText, label: 'Update' };
+                          task: { color: '#f59e0b', icon: CheckCircle2, label: 'Note' },
+                          document: { color: '#7c3aed', icon: FileText, label: 'Document Uploaded' }
+                        }[item.activity_type || 'document'] || { color: 'var(--text-secondary)', icon: FileText, label: 'Update' };
 
                         return (
-                          <div key={act.id} style={{ position: 'relative', zIndex: 1, marginBottom: '32px' }}>
+                          <div key={item.id} style={{ position: 'relative', zIndex: 1, marginBottom: '32px' }}>
                             <div style={{ 
                               position: 'absolute', 
                               left: '-32px', 
@@ -1008,27 +1082,62 @@ const LeadDetails = () => {
                                 <span style={{ fontWeight: '800', fontSize: '11px', color: config.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{config.label}</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>
-                                    {new Date(act.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                    {new Date(item.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                                   </span>
-                                  <button 
-                                    onClick={() => handleDeleteActivity(act.id)}
-                                    style={{ 
-                                      background: 'none', 
-                                      border: 'none', 
-                                      color: 'var(--danger)', 
-                                      cursor: 'pointer', 
-                                      padding: '4px',
-                                      opacity: 0.5,
-                                      transition: 'opacity 0.2s'
-                                    }}
-                                    onMouseOver={(e) => e.currentTarget.style.opacity = 1}
-                                    onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
+                                  {item.type === 'activity' && (
+                                    <button 
+                                      onClick={() => handleDeleteActivity(item.raw.id)}
+                                      style={{ 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: 'var(--danger)', 
+                                        cursor: 'pointer', 
+                                        padding: '4px',
+                                        opacity: 0.5,
+                                        transition: 'opacity 0.2s'
+                                      }}
+                                      onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                                      onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                  {item.type === 'document' && (
+                                    <button 
+                                      onClick={() => handleDeleteDocument(item.raw.id)}
+                                      style={{ 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: 'var(--danger)', 
+                                        cursor: 'pointer', 
+                                        padding: '4px',
+                                        opacity: 0.5,
+                                        transition: 'opacity 0.2s'
+                                      }}
+                                      onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                                      onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-                              <p style={{ fontSize: '14px', margin: 0, lineHeight: '1.6', color: 'var(--text-primary)' }}>{act.note}</p>
+                              <p style={{ fontSize: '14px', margin: 0, lineHeight: '1.6', color: 'var(--text-primary)' }}>{item.note}</p>
+                              {item.type === 'document' && (
+                                <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  {item.is_recording ? (
+                                    <div style={{ flex: 1, background: 'var(--bg-tertiary)', padding: '8px', borderRadius: '12px' }}>
+                                      <audio controls src={item.file_url} style={{ width: '100%', height: '32px' }}>
+                                        Your browser does not support the audio element.
+                                      </audio>
+                                    </div>
+                                  ) : (
+                                    <a href={item.file_url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', textDecoration: 'none' }}>
+                                      <Download size={12} /> Download File
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1090,40 +1199,87 @@ const LeadDetails = () => {
                   </motion.div>
                 ) : (
                   <motion.div key="calls" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
-                    {(!lead.call_records || lead.call_records.length === 0) ? (
+                    {callTimelineItems.length === 0 ? (
                       <div className="glass-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                        No VoIP call recordings available.
+                        No call recordings or logs available.
                       </div>
                     ) : (
-                      lead.call_records.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map((call) => (
-                        <div key={call.id} style={{ position: 'relative', zIndex: 1, marginBottom: '32px' }}>
-                          <div style={{ position: 'absolute', left: '-32px', top: '0', width: '24px', height: '24px', borderRadius: '50%', background: 'white', border: '2px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', boxShadow: '0 0 0 4px var(--bg-primary), 0 4px 6px rgba(0,0,0,0.05)' }}>
-                            <PhoneCall size={12} />
-                          </div>
-                          <div className="glass-card" style={{ padding: '24px', marginLeft: '12px', borderLeft: '4px solid #10b981', background: 'white' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                              <span style={{ fontWeight: '800', fontSize: '11px', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voice Connection Established</span>
-                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>
-                                {new Date(call.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                              </span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                              <p style={{ fontSize: '13px', margin: 0, fontWeight: '500', color: 'var(--text-primary)' }}>Duration: {Math.floor(call.duration/60)}m {call.duration%60}s</p>
-                              {call.recording_url && (
-                                <span style={{ fontSize: '10px', color: '#059669', fontWeight: '800', background: '#d1fae5', padding: '2px 6px', borderRadius: '4px' }}>RECORDED</span>
-                              )}
-                            </div>
-                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', fontStyle: 'italic', lineHeight: '1.6' }}>"{call.summary || 'No call summary generated.'}"</p>
-                            {call.recording_url && (
-                              <div style={{ background: 'var(--bg-tertiary)', padding: '8px', borderRadius: '12px' }}>
-                                <audio controls src={call.recording_url} style={{ width: '100%', height: '32px' }}>
-                                  Your browser does not support the audio element.
-                                </audio>
+                      callTimelineItems.map((item) => {
+                        if (item.type === 'voip') {
+                          return (
+                            <div key={item.id} style={{ position: 'relative', zIndex: 1, marginBottom: '32px' }}>
+                              <div style={{ position: 'absolute', left: '-32px', top: '0', width: '24px', height: '24px', borderRadius: '50%', background: 'white', border: '2px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', boxShadow: '0 0 0 4px var(--bg-primary), 0 4px 6px rgba(0,0,0,0.05)' }}>
+                                <PhoneCall size={12} />
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      ))
+                              <div className="glass-card" style={{ padding: '24px', marginLeft: '12px', borderLeft: '4px solid #10b981', background: 'white' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                  <span style={{ fontWeight: '800', fontSize: '11px', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Voice Connection Established</span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>
+                                    {new Date(item.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                  <p style={{ fontSize: '13px', margin: 0, fontWeight: '500', color: 'var(--text-primary)' }}>Duration: {Math.floor(item.duration/60)}m {item.duration%60}s</p>
+                                  {item.recording_url && (
+                                    <span style={{ fontSize: '10px', color: '#059669', fontWeight: '800', background: '#d1fae5', padding: '2px 6px', borderRadius: '4px' }}>RECORDED</span>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', fontStyle: 'italic', lineHeight: '1.6' }}>"{item.summary || 'No call summary generated.'}"</p>
+                                {item.recording_url && (
+                                  <div style={{ background: 'var(--bg-tertiary)', padding: '8px', borderRadius: '12px' }}>
+                                    <audio controls src={item.recording_url} style={{ width: '100%', height: '32px' }}>
+                                      Your browser does not support the audio element.
+                                    </audio>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div key={item.id} style={{ position: 'relative', zIndex: 1, marginBottom: '32px' }}>
+                              <div style={{ position: 'absolute', left: '-32px', top: '0', width: '24px', height: '24px', borderRadius: '50%', background: 'white', border: '2px solid #7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c3aed', boxShadow: '0 0 0 4px var(--bg-primary), 0 4px 6px rgba(0,0,0,0.05)' }}>
+                                <PhoneCall size={12} />
+                              </div>
+                              <div className="glass-card" style={{ padding: '24px', marginLeft: '12px', borderLeft: '4px solid #7c3aed', background: 'white' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                  <span style={{ fontWeight: '800', fontSize: '11px', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Uploaded Call Recording</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '4px' }}>
+                                      {new Date(item.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                    </span>
+                                    <button 
+                                      onClick={() => handleDeleteDocument(item.raw.id)}
+                                      style={{ 
+                                        background: 'none', 
+                                        border: 'none', 
+                                        color: 'var(--danger)', 
+                                        cursor: 'pointer', 
+                                        padding: '4px',
+                                        opacity: 0.5,
+                                        transition: 'opacity 0.2s'
+                                      }}
+                                      onMouseOver={(e) => e.currentTarget.style.opacity = 1}
+                                      onMouseOut={(e) => e.currentTarget.style.opacity = 0.5}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                  <p style={{ fontSize: '13px', margin: 0, fontWeight: '600', color: 'var(--text-primary)' }}>File: {item.file_name}</p>
+                                  <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '800', background: '#f5f3ff', padding: '2px 6px', borderRadius: '4px' }}>{(item.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                                </div>
+                                <div style={{ background: 'var(--bg-tertiary)', padding: '8px', borderRadius: '12px' }}>
+                                  <audio controls src={item.file_url} style={{ width: '100%', height: '32px' }}>
+                                    Your browser does not support the audio element.
+                                  </audio>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      })
                     )}
                   </motion.div>
                 )}

@@ -59,12 +59,14 @@ const Dashboard = () => {
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const leadsNeedAttention = useMemo(() => {
-    return leads.filter(l => 
-      !l.is_final && 
-      l.is_at_risk && 
-      !['lost', 'next intake', 'domestic'].some(s => (l.stage_name || '').toLowerCase().includes(s))
-    );
-  }, [leads]);
+    return leads.filter(l => {
+      if (l.is_final) return false;
+      if (!l.is_at_risk) return false;
+      const stageObj = stages.find(s => s.id === l.stage);
+      const stageName = (stageObj?.name || l.stage_name || '').toLowerCase();
+      return !['lost', 'next intake', 'domestic'].some(s => stageName.includes(s));
+    });
+  }, [leads, stages]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

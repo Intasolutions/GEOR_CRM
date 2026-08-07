@@ -232,7 +232,7 @@ const Pipeline = () => {
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               <input
                 type="text"
-                placeholder="Search leads by name, email, phone or company..."
+                placeholder="Search leads by name, email, phone or course..."
                 className="glass-input"
                 style={{ paddingLeft: '36px', height: '40px', fontSize: '14px' }}
                 value={searchQuery}

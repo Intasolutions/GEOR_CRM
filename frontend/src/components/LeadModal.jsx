@@ -138,7 +138,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Company</label>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Course</label>
             <input 
               className="glass-input" 
               value={formData.company}
