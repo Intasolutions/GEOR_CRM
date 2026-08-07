@@ -58,6 +58,13 @@ const Dashboard = () => {
   const [briefing, setBriefing] = useState(null);
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const leadsNeedAttention = useMemo(() => {
+    return leads.filter(l => 
+      !l.is_final && 
+      l.is_at_risk && 
+      !['lost', 'next intake', 'domestic'].some(s => (l.stage_name || '').toLowerCase().includes(s))
+    );
+  }, [leads]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -304,11 +311,11 @@ const Dashboard = () => {
             <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px', margin: 0 }}>Active leads that currently have no future follow-up dates or reminders scheduled</p>
           </div>
           <div style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(239, 68, 68, 0.08)', padding: '6px 14px', borderRadius: '20px', color: '#ef4444' }}>
-            {leads.filter(l => !l.is_final && l.is_at_risk).length} Need Attention
+            {leadsNeedAttention.length} Need Attention
           </div>
         </div>
 
-        {leads.filter(l => !l.is_final && l.is_at_risk).length === 0 ? (
+        {leadsNeedAttention.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', margin: '0 auto 16px' }}>
               <CheckCircle2 size={24} />
@@ -329,11 +336,20 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {leads.filter(l => !l.is_final && l.is_at_risk).slice(0, 5).map(l => {
+                {leadsNeedAttention.slice(0, 5).map(l => {
                   const stageObj = stages.find(s => s.id === l.stage);
                   const stageColor = stageObj?.color || '#3b82f6';
                   return (
-                    <tr key={l.id} style={{ borderBottom: '1px solid #e2e8f0', fontSize: '14px', transition: 'background 0.2s' }} className="table-row-hover">
+                    <tr
+                      key={l.id}
+                      onClick={(e) => {
+                        if (!e.target.closest('button')) {
+                          navigate(`/leads/${l.id}`);
+                        }
+                      }}
+                      style={{ borderBottom: '1px solid #e2e8f0', fontSize: '14px', transition: 'background 0.2s', cursor: 'pointer' }}
+                      className="table-row-hover"
+                    >
                       <td style={{ padding: '16px' }}>
                         <div style={{ fontWeight: '700', color: '#0f172a' }}>{l.name}</div>
                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Source: {l.lead_source || 'Direct'}</div>
@@ -366,13 +382,13 @@ const Dashboard = () => {
                 })}
               </tbody>
             </table>
-            {leads.filter(l => !l.is_final && l.is_at_risk).length > 5 && (
+            {leadsNeedAttention.length > 5 && (
               <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                 <button
                   onClick={() => navigate('/leads')}
                   style={{ background: 'none', border: 'none', color: 'var(--brand-blue)', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
                 >
-                  View All {leads.filter(l => !l.is_final && l.is_at_risk).length} Leads Need Attention →
+                  View All {leadsNeedAttention.length} Leads Need Attention →
                 </button>
               </div>
             )}

@@ -197,12 +197,22 @@ const Leads = () => {
   const renderMobileCards = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
       {leads.map(lead => (
-        <div key={lead.id} className="glass-card" style={{
-          padding: '16px',
-          borderLeft: lead.is_at_risk ? `4px solid ${colors.atRisk}` : `4px solid ${colors.primary}`,
-          background: 'white',
-          position: 'relative'
-        }}>
+        <div
+          key={lead.id}
+          className="glass-card"
+          onClick={(e) => {
+            if (e.target.tagName !== 'INPUT' && !e.target.closest('a')) {
+              navigate(`/leads/${lead.id}`);
+            }
+          }}
+          style={{
+            padding: '16px',
+            borderLeft: lead.is_at_risk ? `4px solid ${colors.atRisk}` : `4px solid ${colors.primary}`,
+            background: 'white',
+            position: 'relative',
+            cursor: 'pointer'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input type="checkbox" checked={selectedLeads.includes(lead.id)} onChange={() => toggleSelectOne(lead.id)} />
@@ -261,7 +271,7 @@ const Leads = () => {
             <input
               type="text"
               className="glass-input"
-              placeholder="Search by name, company or email..."
+              placeholder="Search by name, phone, company or email..."
               style={{ paddingLeft: '44px', width: '100%', height: '48px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -420,11 +430,21 @@ const Leads = () => {
                     <tr key={i}><td colSpan="7" style={{ padding: '20px' }}><div className="animate-pulse" style={{ height: '40px', background: '#f1f5f9', borderRadius: '8px' }}></div></td></tr>
                   ))
                 ) : leads.map((lead) => (
-                  <tr key={lead.id} className="table-row-hover" style={{
-                    borderBottom: '1px solid #f1f5f9',
-                    background: selectedLeads.includes(lead.id) ? '#f5f7ff' : 'transparent',
-                    position: 'relative'
-                  }}>
+                  <tr
+                    key={lead.id}
+                    className="table-row-hover"
+                    onClick={(e) => {
+                      if (e.target.tagName !== 'INPUT' && !e.target.closest('button') && !e.target.closest('.glass-card')) {
+                        navigate(`/leads/${lead.id}`);
+                      }
+                    }}
+                    style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      background: selectedLeads.includes(lead.id) ? '#f5f7ff' : 'transparent',
+                      position: 'relative',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <td style={{ padding: '16px' }}>
                       <input type="checkbox" checked={selectedLeads.includes(lead.id)} onChange={() => toggleSelectOne(lead.id)} />
                     </td>
