@@ -221,7 +221,8 @@ class LeadViewSet(viewsets.ModelViewSet):
                         f"Next allowed stage is Order {old_stage.order + 1}."
                     )
         # ── Mandatory Call/Screenshot Upload for Stages Before 1200 USD ─────────
-        if new_stage_obj and old_stage and new_stage_obj != old_stage:
+        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
+        if not is_admin_or_manager and new_stage_obj and old_stage and new_stage_obj != old_stage:
             SPECIAL_STAGES = ['lost', 'next intake', 'domestic']
             new_stage_name_lower = new_stage_obj.name.lower()
             is_special = any(s in new_stage_name_lower for s in SPECIAL_STAGES)
