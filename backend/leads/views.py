@@ -220,6 +220,28 @@ class LeadViewSet(viewsets.ModelViewSet):
                         f"Current stage is '{old_stage.name}' (Order {old_stage.order}). "
                         f"Next allowed stage is Order {old_stage.order + 1}."
                     )
+        # ── Mandatory Call/Screenshot Upload for Stages Before 1200 USD ─────────
+        if new_stage_obj and old_stage and new_stage_obj != old_stage:
+            stage_1200 = LeadStage.objects.filter(name__icontains="1200").first()
+            limit_order = stage_1200.order if stage_1200 else 6
+            
+            if old_stage.order < limit_order:
+                # Find the timestamp of the last stage change
+                last_change = LeadAuditLog.objects.filter(
+                    lead=old_instance, 
+                    action="Stage Changed"
+                ).order_by('-timestamp').first()
+                
+                cutoff = last_change.timestamp if last_change else old_instance.created_at
+                
+                has_doc = LeadDocument.objects.filter(lead=old_instance, uploaded_at__gte=cutoff).exists()
+                has_call = CallRecord.objects.filter(lead=old_instance, timestamp__gte=cutoff).exists()
+                
+                if not (has_doc or has_call):
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name}' before changing it."
+                    )
         # ───────────────────────────────────────────────────────────────────────
 
         new_instance = serializer.save()

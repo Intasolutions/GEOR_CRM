@@ -206,13 +206,23 @@ const LeadDetails = () => {
       fetchData();
     } catch (err) {
       console.error(err);
-      if (err.response && err.response.data && err.response.data.detail) {
-        toast.error(err.response.data.detail);
-      } else if (err.response && err.response.data && err.response.data.non_field_errors) {
-        toast.error(err.response.data.non_field_errors[0]);
-      } else {
-        toast.error("Failed to update stage");
+      let errorMsg = 'Failed to update stage';
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else if (data.non_field_errors && data.non_field_errors[0]) {
+          errorMsg = data.non_field_errors[0];
+        } else {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey && Array.isArray(data[firstKey]) && data[firstKey][0]) {
+            errorMsg = data[firstKey][0];
+          }
+        }
       }
+      toast.error(errorMsg);
     } finally {
       setUpdatingStage(false);
     }

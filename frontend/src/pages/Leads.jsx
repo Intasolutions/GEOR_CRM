@@ -160,7 +160,22 @@ const Leads = () => {
       setIsBulkStageModalOpen(false);
     } catch (err) { 
       console.error(err); 
-      const errorMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.detail || "Failed to update one or more leads. Please check stage sequence constraints.";
+      let errorMsg = "Failed to update one or more leads. Please check stage sequence or missing document constraints.";
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else if (data.non_field_errors && data.non_field_errors[0]) {
+          errorMsg = data.non_field_errors[0];
+        } else {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey && Array.isArray(data[firstKey]) && data[firstKey][0]) {
+            errorMsg = data[firstKey][0];
+          }
+        }
+      }
       import('react-hot-toast').then(m => m.toast.error(errorMsg));
     }
   };
