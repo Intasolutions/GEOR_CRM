@@ -415,6 +415,23 @@ const LeadDetails = () => {
       fetchData();
     } catch (err) {
       console.error(err);
+      let errorMsg = 'Failed to schedule reminder';
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else if (data.non_field_errors && data.non_field_errors[0]) {
+          errorMsg = data.non_field_errors[0];
+        } else {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey && Array.isArray(data[firstKey]) && data[firstKey][0]) {
+            errorMsg = data[firstKey][0];
+          }
+        }
+      }
+      toast.error(errorMsg);
     }
   };
 

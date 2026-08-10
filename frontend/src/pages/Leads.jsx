@@ -23,7 +23,8 @@ const Leads = () => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [stages, setStages] = useState([]);
   const [users, setUsers] = useState([]);
-  const [filters, setFilters] = useState({ stage: '', assigned_to: '' });
+  const [campaigns, setCampaigns] = useState([]);
+  const [filters, setFilters] = useState({ stage: '', assigned_to: '', campaign: '' });
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [isBulkStageModalOpen, setIsBulkStageModalOpen] = useState(false);
   const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
@@ -48,6 +49,7 @@ const Leads = () => {
     try {
       const stageId = searchParams.get('stage');
       const assignedToId = searchParams.get('assigned_to');
+      const campaignId = searchParams.get('campaign');
       const atRisk = searchParams.get('at_risk');
       const missedFollowups = searchParams.get('missed_followups_only');
       const pendingFollowups = searchParams.get('pending_followups');
@@ -59,6 +61,7 @@ const Leads = () => {
 
       if (stageId) url += `&stage=${stageId}`;
       if (assignedToId) url += `&assigned_to=${assignedToId}`;
+      if (campaignId) url += `&campaign=${campaignId}`;
       if (atRisk) url += `&at_risk=true`;
       if (missedFollowups) url += `&missed_followups_only=true`;
       if (pendingFollowups) url += `&pending_followups=true`;
@@ -91,10 +94,18 @@ const Leads = () => {
     } catch (err) { }
   };
 
+  const fetchCampaigns = async () => {
+    try {
+      const res = await api.get('campaigns/');
+      setCampaigns(Array.isArray(res.data) ? res.data : []);
+    } catch (err) { }
+  };
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
     fetchStages();
+    fetchCampaigns();
     if (user?.role === 'admin') {
       fetchUsers();
     }
@@ -104,8 +115,9 @@ const Leads = () => {
   useEffect(() => {
     const stageId = searchParams.get('stage') || '';
     const assignedToId = searchParams.get('assigned_to') || '';
-    setFilters({ stage: stageId, assigned_to: assignedToId });
-    if (stageId || assignedToId) setShowFilters(true);
+    const campaignId = searchParams.get('campaign') || '';
+    setFilters({ stage: stageId, assigned_to: assignedToId, campaign: campaignId });
+    if (stageId || assignedToId || campaignId) setShowFilters(true);
   }, [searchParams]);
 
   useEffect(() => {
@@ -340,6 +352,23 @@ const Leads = () => {
                     </select>
                   </div>
                 )}
+
+                <div style={{ minWidth: '200px', flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>CAMPAIGN</label>
+                  <select
+                    className="glass-input"
+                    style={{ width: '100%', background: 'white' }}
+                    value={filters.campaign}
+                    onChange={e => {
+                      const newParams = new URLSearchParams(searchParams);
+                      if (e.target.value) newParams.set('campaign', e.target.value); else newParams.delete('campaign');
+                      navigate(`/leads?${newParams.toString()}`);
+                    }}
+                  >
+                    <option value="">All Campaigns</option>
+                    {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
 
                 <div style={{ minWidth: '180px', flex: 1 }}>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>START DATE (CREATED)</label>

@@ -220,34 +220,27 @@ class LeadViewSet(viewsets.ModelViewSet):
                         f"Current stage is '{old_stage.name}' (Order {old_stage.order}). "
                         f"Next allowed stage is Order {old_stage.order + 1}."
                     )
-        # ── Mandatory Call/Screenshot Upload for Stages Before 1200 USD ─────────
+        # ── Mandatory Call/Screenshot Upload for Lost and Next Intake Stages ───
         is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
         if not is_admin_or_manager and new_stage_obj and old_stage and new_stage_obj != old_stage:
-            SPECIAL_STAGES = ['lost', 'next intake', 'domestic']
             new_stage_name_lower = new_stage_obj.name.lower()
-            is_special = any(s in new_stage_name_lower for s in SPECIAL_STAGES)
-            
-            if not is_special:
-                stage_1200 = LeadStage.objects.filter(name__icontains="1200").first()
-                limit_order = stage_1200.order if stage_1200 else 6
+            if 'lost' in new_stage_name_lower or 'next intake' in new_stage_name_lower:
+                # Find the timestamp of the last stage change
+                last_change = LeadAuditLog.objects.filter(
+                    lead=old_instance, 
+                    action="Stage Changed"
+                ).order_by('-timestamp').first()
                 
-                if old_stage.order < limit_order:
-                    # Find the timestamp of the last stage change
-                    last_change = LeadAuditLog.objects.filter(
-                        lead=old_instance, 
-                        action="Stage Changed"
-                    ).order_by('-timestamp').first()
-                    
-                    cutoff = last_change.timestamp if last_change else old_instance.created_at
-                    
-                    has_doc = LeadDocument.objects.filter(lead=old_instance, uploaded_at__gte=cutoff).exists()
-                    has_call = CallRecord.objects.filter(lead=old_instance, timestamp__gte=cutoff).exists()
-                    
-                    if not (has_doc or has_call):
-                        from rest_framework.exceptions import ValidationError
-                        raise ValidationError(
-                            f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name}' before changing it."
-                        )
+                cutoff = last_change.timestamp if last_change else old_instance.created_at
+                
+                has_doc = LeadDocument.objects.filter(lead=old_instance, uploaded_at__gte=cutoff).exists()
+                has_call = CallRecord.objects.filter(lead=old_instance, timestamp__gte=cutoff).exists()
+                
+                if not (has_doc or has_call):
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        f"Mandatory: You must upload a call record or screenshot/document in the current stage '{old_stage.name}' before moving to '{new_stage_obj.name}'."
+                    )
         # ───────────────────────────────────────────────────────────────────────
 
         new_instance = serializer.save()
@@ -554,12 +547,70 @@ class ReminderViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        if not (user.is_superuser or role in ['admin', 'manager']):
+        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
+        if not is_admin_or_manager:
             if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("You do not have access to this lead.")
+                
+            # Mandatory check: Must upload doc/call for stages before 1200 USD
+            old_stage = lead.stage
+            if old_stage:
+                stage_1200 = LeadStage.objects.filter(name__icontains="1200").first()
+                limit_order = stage_1200.order if stage_1200 else 6
+                
+                if old_stage.order < limit_order:
+                    # Find the timestamp of the last stage change
+                    last_change = LeadAuditLog.objects.filter(
+                        lead=lead, 
+                        action="Stage Changed"
+                    ).order_by('-timestamp').first()
+                    
+                    cutoff = last_change.timestamp if last_change else lead.created_at
+                    
+                    has_doc = LeadDocument.objects.filter(lead=lead, uploaded_at__gte=cutoff).exists()
+                    has_call = CallRecord.objects.filter(lead=lead, timestamp__gte=cutoff).exists()
+                    
+                    if not (has_doc or has_call):
+                        from rest_framework.exceptions import ValidationError
+                        raise ValidationError(
+                            f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name}' before scheduling a follow-up date."
+                        )
             
         serializer.save(user=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        profile = getattr(user, 'profile', None)
+        role = profile.role if profile else 'agent'
+        lead = serializer.instance.lead
+        
+        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
+        if not is_admin_or_manager:
+            # Mandatory check: Must upload doc/call for stages before 1200 USD
+            old_stage = lead.stage
+            if old_stage:
+                stage_1200 = LeadStage.objects.filter(name__icontains="1200").first()
+                limit_order = stage_1200.order if stage_1200 else 6
+                
+                if old_stage.order < limit_order:
+                    last_change = LeadAuditLog.objects.filter(
+                        lead=lead, 
+                        action="Stage Changed"
+                    ).order_by('-timestamp').first()
+                    
+                    cutoff = last_change.timestamp if last_change else lead.created_at
+                    
+                    has_doc = LeadDocument.objects.filter(lead=lead, uploaded_at__gte=cutoff).exists()
+                    has_call = CallRecord.objects.filter(lead=lead, timestamp__gte=cutoff).exists()
+                    
+                    if not (has_doc or has_call):
+                        from rest_framework.exceptions import ValidationError
+                        raise ValidationError(
+                            f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name}' before modifying a follow-up date."
+                        )
+                        
+        serializer.save()
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
