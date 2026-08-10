@@ -21,6 +21,7 @@ import Campaigns from './pages/Campaigns';
 import Reports from './pages/Reports';
 import InternalTasks from './pages/InternalTasks';
 import LostTaskReport from './pages/LostTaskReport';
+import MarketerDashboard from './pages/MarketerDashboard';
 import { Toaster } from 'react-hot-toast';
 import NotificationManager from './components/NotificationManager';
 
@@ -313,11 +314,19 @@ const ProtectedLayout = ({ children }) => {
   );
 };
 
+const RootDashboard = () => {
+  const { user } = useAuth();
+  if (user?.role === 'marketer') {
+    return <MarketerDashboard />;
+  }
+  return <Dashboard />;
+};
+
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+      <Route path="/" element={<ProtectedLayout><RootDashboard /></ProtectedLayout>} />
       <Route path="/leads" element={<ProtectedLayout><Leads /></ProtectedLayout>} />
       <Route path="/leads/import" element={<ProtectedLayout><ImportLeads /></ProtectedLayout>} />
       <Route path="/leads/:id" element={<ProtectedLayout><LeadDetails /></ProtectedLayout>} />

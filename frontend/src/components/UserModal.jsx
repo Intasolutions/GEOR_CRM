@@ -64,6 +64,15 @@ const ROLE_DEFAULTS = {
     reports: { view: true, create: true, edit: true, delete: true },
     campaigns: { view: true, create: true, edit: true, delete: true },
     integrations: { view: true, create: true, edit: true, delete: true }
+  },
+  marketer: {
+    leads: { view: true, create: false, edit: false, delete: false },
+    pipeline: { view: false, create: false, edit: false, delete: false },
+    custom_fields: { view: false, create: false, edit: false, delete: false },
+    users: { view: false, create: false, edit: false, delete: false },
+    reports: { view: true, create: false, edit: false, delete: false },
+    campaigns: { view: true, create: false, edit: false, delete: false },
+    integrations: { view: false, create: false, edit: false, delete: false }
   }
 };
 
@@ -196,6 +205,7 @@ const UserModal = ({ isOpen, onClose, onRefresh, editingUser = null }) => {
                   <option value="sales">Sales Agent</option>
                   <option value="developer">Developer</option>
                   <option value="agent">General Agent</option>
+                  <option value="marketer">Marketer</option>
                 </select>
               </div>
             </div>

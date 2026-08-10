@@ -54,6 +54,9 @@ class Lead(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     external_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    age = models.IntegerField(null=True, blank=True)
+    place = models.CharField(max_length=255, null=True, blank=True)
+    qualification = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -171,6 +174,7 @@ class UserProfile(models.Model):
         ('agent', 'Agent'),
         ('sales', 'Sales'),
         ('developer', 'Developer'),
+        ('marketer', 'Marketer'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default='agent')

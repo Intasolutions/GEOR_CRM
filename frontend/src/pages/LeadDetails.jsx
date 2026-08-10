@@ -6,7 +6,8 @@ import {
   Clock, Plus, MessageSquare, PhoneCall, MailCheck, 
   CheckCircle2, AlertCircle, MoreVertical, Database, 
   FileText, Trash2, Edit3, Edit, UserCheck, Search, Filter, MessageCircle,
-  TrendingUp, Paperclip, Download, X, Sparkles, Receipt, Send, Share2
+  TrendingUp, Paperclip, Download, X, Sparkles, Receipt, Send, Share2,
+  MapPin, GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -40,6 +41,10 @@ const LeadDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false);
+  const [age, setAge] = useState('');
+  const [place, setPlace] = useState('');
+  const [qualification, setQualification] = useState('');
   
   // Reminder State
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -150,6 +155,9 @@ const LeadDetails = () => {
       setUsers(usersRes.data);
       setDealValue(leadRes.data.deal_value || '0.00');
       setAssignedTo(leadRes.data.assigned_to || '');
+      setAge(leadRes.data.age || '');
+      setPlace(leadRes.data.place || '');
+      setQualification(leadRes.data.qualification || '');
     } catch (err) {
       console.error(err);
       if (err.response && err.response.status === 404) {
@@ -225,6 +233,24 @@ const LeadDetails = () => {
       toast.error(errorMsg);
     } finally {
       setUpdatingStage(false);
+    }
+  };
+
+
+  const handleSaveLeadData = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      await api.patch(`leads/${id}/`, {
+        age: age ? parseInt(age) : null,
+        place: place,
+        qualification: qualification
+      });
+      setIsDataModalOpen(false);
+      toast.success("Lead data updated successfully");
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update lead data");
     }
   };
 
@@ -548,6 +574,10 @@ const LeadDetails = () => {
                     <Edit3 size={16} /> Edit Details
                   </button>
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+                  <button onClick={() => { setIsDataModalOpen(true); setShowOptions(false); }} style={{ width: '100%', border: 'none', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', background: 'none', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                    <Database size={16} /> Enter Data
+                  </button>
+                  <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
                   {user && !['sales', 'agent'].includes(user.role) && (
                     <button 
                       onClick={handleDeleteLead}
@@ -782,6 +812,36 @@ const LeadDetails = () => {
                   <div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Creation Date</p>
                     <p style={{ fontSize: '14px', fontWeight: '500' }}>{new Date(lead.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <UserCheck size={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Age</p>
+                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.age || '—'}</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <MapPin size={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Place</p>
+                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.place || '—'}</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <GraduationCap size={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Qualification</p>
+                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.qualification || '—'}</p>
                   </div>
                 </div>
 
@@ -1501,6 +1561,72 @@ const LeadDetails = () => {
           editLead={lead}
         />
       )}
+
+      {/* Enter Lead Data Modal */}
+      <AnimatePresence>
+        {isDataModalOpen && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDataModalOpen(false)}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }} 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-card" 
+              style={{ width: '420px', padding: '32px', position: 'relative', zIndex: 1001, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+            >
+              <h3 style={{ fontSize: '20px', marginBottom: '8px', fontWeight: '700' }}>Enter Lead Data</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Provide additional details about the prospect.</p>
+              
+              <form onSubmit={handleSaveLeadData}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Age</label>
+                  <input 
+                    type="number"
+                    className="glass-input" 
+                    placeholder="Enter age..."
+                    value={age}
+                    onChange={e => setAge(e.target.value)}
+                  />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Place</label>
+                  <input 
+                    type="text"
+                    className="glass-input" 
+                    placeholder="Enter place..."
+                    value={place}
+                    onChange={e => setPlace(e.target.value)}
+                  />
+                </div>
+                <div style={{ marginBottom: '32px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Qualification</label>
+                  <input 
+                    type="text"
+                    className="glass-input" 
+                    placeholder="Enter qualification..."
+                    value={qualification}
+                    onChange={e => setQualification(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                  <button type="button" onClick={() => setIsDataModalOpen(false)} className="btn-secondary" style={{ padding: '10px 20px', borderRadius: '8px' }}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-primary" style={{ padding: '10px 24px', borderRadius: '8px' }}>
+                    Save Data
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

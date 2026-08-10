@@ -31,12 +31,12 @@ class LeadViewSet(viewsets.ModelViewSet):
         profile = getattr(user, 'profile', None)
         
         is_sales_or_agent = profile and profile.role in ['sales', 'agent']
-        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
+        is_admin_manager_or_marketer = user.is_superuser or (profile and profile.role in ['admin', 'manager', 'marketer'])
 
         # Base queryset - Role Scoping
-        if is_sales_or_agent or not is_admin_or_manager:
+        if not is_admin_manager_or_marketer:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
-            # Hide lost, next intake and domestic leads from sales users
+            # Hide lost, next intake and domestic leads from sales/agent users
             queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake') | Q(stage__name__icontains='domestic'))
         else:
             queryset = Lead.objects.all()
@@ -105,6 +105,21 @@ class LeadViewSet(viewsets.ModelViewSet):
                 Q(phone__icontains=search_query)
             )
             
+        # Age, Place, Qualification filters
+        filter_age = self.request.query_params.get('age')
+        filter_place = self.request.query_params.get('place')
+        filter_qualification = self.request.query_params.get('qualification')
+
+        if filter_age:
+            try:
+                queryset = queryset.filter(age=int(filter_age))
+            except ValueError:
+                pass
+        if filter_place:
+            queryset = queryset.filter(place__icontains=filter_place)
+        if filter_qualification:
+            queryset = queryset.filter(qualification__icontains=filter_qualification)
+
         # Support for new "Archive & Reports" module
         exclude_final = self.request.query_params.get('exclude_final')
         is_final = self.request.query_params.get('is_final')
@@ -274,6 +289,40 @@ class LeadViewSet(viewsets.ModelViewSet):
                 old_value=str(old_deal_value),
                 new_value=str(new_deal_value)
             )
+
+
+    @action(detail=False, methods=['get'])
+    def marketer_analytics(self, request):
+        from django.db.models import Count
+        leads = Lead.objects.all()
+        
+        # Age brackets
+        age_brackets = {
+            'Under 18': leads.filter(age__lt=18).count(),
+            '18-25': leads.filter(age__gte=18, age__lte=25).count(),
+            '26-35': leads.filter(age__gte=26, age__lte=35).count(),
+            '36-45': leads.filter(age__gte=36, age__lte=45).count(),
+            '46+': leads.filter(age__gt=45).count(),
+            'Not Specified': leads.filter(age__isnull=True).count(),
+        }
+        
+        # Top places (limit to top 10)
+        places = leads.exclude(place__isnull=True).exclude(place='').values('place').annotate(count=Count('id')).order_by('-count')[:10]
+        places_data = []
+        for p in places:
+            places_data.append({'name': p['place'], 'count': p['count']})
+            
+        # Top qualifications
+        quals = leads.exclude(qualification__isnull=True).exclude(qualification='').values('qualification').annotate(count=Count('id')).order_by('-count')[:10]
+        quals_data = []
+        for q in quals:
+            quals_data.append({'name': q['qualification'], 'count': q['count']})
+            
+        return Response({
+            'age_brackets': age_brackets,
+            'top_places': places_data,
+            'top_qualifications': quals_data,
+        })
 
 
     @action(detail=False, methods=['post'])
