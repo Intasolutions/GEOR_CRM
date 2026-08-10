@@ -31,13 +31,20 @@ class LeadViewSet(viewsets.ModelViewSet):
         profile = getattr(user, 'profile', None)
         
         is_sales_or_agent = profile and profile.role in ['sales', 'agent']
-        is_admin_manager_or_marketer = user.is_superuser or (profile and profile.role in ['admin', 'manager', 'marketer'])
+        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
+        is_marketer = profile and profile.role == 'marketer'
 
         # Base queryset - Role Scoping
-        if not is_admin_manager_or_marketer:
+        if is_sales_or_agent:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
             # Hide lost, next intake and domestic leads from sales/agent users
             queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake') | Q(stage__name__icontains='domestic'))
+        elif is_marketer:
+            queryset = Lead.objects.filter(
+                Q(age__isnull=False) |
+                (Q(place__isnull=False) & ~Q(place='')) |
+                (Q(qualification__isnull=False) & ~Q(qualification=''))
+            )
         else:
             queryset = Lead.objects.all()
 
@@ -294,7 +301,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def marketer_analytics(self, request):
         from django.db.models import Count
-        leads = Lead.objects.all()
+        leads = self.filter_queryset(self.get_queryset())
         
         # Age brackets
         age_brackets = {
