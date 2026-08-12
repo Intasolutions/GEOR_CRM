@@ -753,7 +753,28 @@ const LeadDetails = () => {
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
-                <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '4px', letterSpacing: '0.05em' }}>About</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.05em' }}>About</h3>
+                  <button 
+                    onClick={() => setIsDataModalOpen(true)}
+                    style={{ 
+                      background: '#ef4444', 
+                      color: 'white', 
+                      border: 'none', 
+                      padding: '4px 10px', 
+                      borderRadius: '8px', 
+                      fontSize: '11px', 
+                      fontWeight: '700', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                    }}
+                  >
+                    <Plus size={12} /> Add Data
+                  </button>
+                </div>
                 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
