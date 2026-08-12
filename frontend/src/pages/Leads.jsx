@@ -61,6 +61,8 @@ const Leads = () => {
 
       if (stageId) url += `&stage=${stageId}`;
       if (assignedToId) url += `&assigned_to=${assignedToId}`;
+      const createdById = searchParams.get('created_by');
+      if (createdById) url += `&created_by=${createdById}`;
       if (campaignId) url += `&campaign=${campaignId}`;
       if (atRisk) url += `&at_risk=true`;
       if (missedFollowups) url += `&missed_followups_only=true`;
@@ -348,6 +350,25 @@ const Leads = () => {
                     >
                       <option value="">All Users</option>
                       <option value="unassigned" style={{ fontWeight: 'bold' }}>Unassigned Leads</option>
+                      {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {user?.role === 'admin' && (
+                  <div style={{ minWidth: '200px', flex: 1 }}>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: colors.textSub, marginBottom: '8px', display: 'block' }}>CREATED BY</label>
+                    <select
+                      className="glass-input"
+                      style={{ width: '100%', background: 'white' }}
+                      value={searchParams.get('created_by') || ''}
+                      onChange={e => {
+                        const newParams = new URLSearchParams(searchParams);
+                        if (e.target.value) newParams.set('created_by', e.target.value); else newParams.delete('created_by');
+                        navigate(`/leads?${newParams.toString()}`);
+                      }}
+                    >
+                      <option value="">All Creators</option>
                       {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
                     </select>
                   </div>

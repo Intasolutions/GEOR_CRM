@@ -924,6 +924,16 @@ const LeadDetails = () => {
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                    <User size={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Created By</p>
+                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.created_by_name || 'System / Imported'}</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                     <UserCheck size={16} />
                   </div>
                   <div style={{ flex: 1 }}>

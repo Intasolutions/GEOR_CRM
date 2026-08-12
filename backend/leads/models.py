@@ -58,6 +58,7 @@ class Lead(models.Model):
     age = models.IntegerField(null=True, blank=True)
     place = models.CharField(max_length=255, null=True, blank=True)
     qualification = models.CharField(max_length=255, null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_leads')
 
     def __str__(self):
         return self.name

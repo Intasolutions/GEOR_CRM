@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Building, Flag, Megaphone } from 'lucide-react';
 import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
+  const { user } = useAuth();
   const [stages, setStages] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [formData, setFormData] = useState({
@@ -15,6 +17,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
     assigned_to: '',
     deal_value: 0,
     lost_reason: '',
+    campaign: '',
     custom_data: {}
   });
   const [campaigns, setCampaigns] = useState([]);
@@ -25,15 +28,18 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
       Promise.all([
         api.get('stages/'),
         api.get('custom-fields/'),
-        api.get('users/')
-      ]).then(([stagesRes, fieldsRes, usersRes]) => {
+        api.get('users/'),
+        api.get('campaigns/')
+      ]).then(([stagesRes, fieldsRes, usersRes, campaignsRes]) => {
         const stageData = Array.isArray(stagesRes.data) ? stagesRes.data : [];
         const fieldData = Array.isArray(fieldsRes.data) ? fieldsRes.data : [];
         const userData = Array.isArray(usersRes.data) ? usersRes.data : [];
+        const campaignData = Array.isArray(campaignsRes.data) ? campaignsRes.data : [];
         
         setStages(stageData);
         setCustomFields(fieldData);
         setUsers(userData);
+        setCampaigns(campaignData);
         
         if (editLead) {
           // Pre-fill the form with existing lead data
@@ -53,6 +59,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
             assigned_to: editLead.assigned_to || '',
             deal_value: editLead.deal_value || 0,
             lost_reason: editLead.lost_reason || '',
+            campaign: editLead.campaign || '',
             custom_data: customDataMap
           });
         } else if (stageData.length > 0) {
@@ -63,6 +70,7 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
         setStages([]);
         setCustomFields([]);
         setUsers([]);
+        setCampaigns([]);
       });
     }
   }, [isOpen]);
@@ -76,7 +84,8 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
       const submissionData = {
         ...formData,
         stage: formData.stage === "" ? null : formData.stage,
-        assigned_to: formData.assigned_to === "" ? null : formData.assigned_to
+        assigned_to: formData.assigned_to === "" ? null : formData.assigned_to,
+        campaign: formData.campaign === "" ? null : formData.campaign
       };
       
       if (editLead) {
@@ -186,6 +195,19 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
                 value={formData.deal_value}
                 onChange={e => setFormData({ ...formData, deal_value: e.target.value })}
               />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Campaign</label>
+              <select 
+                className="glass-input"
+                style={{ appearance: 'none' }}
+                value={formData.campaign}
+                onChange={e => setFormData({ ...formData, campaign: e.target.value })}
+                disabled={user?.role !== 'admin'}
+              >
+                <option value="">-- No Campaign --</option>
+                {(campaigns || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
           </div>
 

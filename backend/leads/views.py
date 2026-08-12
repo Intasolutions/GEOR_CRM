@@ -99,6 +99,10 @@ class LeadViewSet(viewsets.ModelViewSet):
         elif assigned_to_id and (user.is_superuser or (profile and profile.role in ['admin', 'manager'])):
             queryset = queryset.filter(assigned_to_id=assigned_to_id)
             
+        created_by_id = self.request.query_params.get('created_by')
+        if created_by_id:
+            queryset = queryset.filter(created_by_id=created_by_id)
+            
 
         if start_date:
             queryset = queryset.filter(created_at__date__gte=start_date)
@@ -192,9 +196,9 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         # If sales/agent creates a lead, force it to be unassigned so it goes to admin
         if profile and profile.role in ['sales', 'agent']:
-            lead = serializer.save(assigned_to=None)
+            lead = serializer.save(assigned_to=None, created_by=user)
         else:
-            lead = serializer.save()
+            lead = serializer.save(created_by=user)
         LeadAuditLog.objects.create(
             lead=lead,
             user=self.request.user if self.request.user.is_authenticated else None,
@@ -217,9 +221,20 @@ class LeadViewSet(viewsets.ModelViewSet):
         old_stage = old_instance.stage
         old_deal_value = old_instance.deal_value
 
-        # ── Sequential Stage Enforcement for Sales/Agent users ─────────────────
         user = self.request.user
         profile = getattr(user, 'profile', None)
+
+        # ── Campaign protection - only admins/superusers can change campaign ────
+        if 'campaign' in serializer.validated_data:
+            new_campaign = serializer.validated_data.get('campaign')
+            if old_instance.campaign != new_campaign:
+                is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
+                if not is_admin_or_manager:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied("Only Administrators can change the campaign of a lead.")
+        # ───────────────────────────────────────────────────────────────────────
+
+        # ── Sequential Stage Enforcement for Sales/Agent users ─────────────────
         is_sales_or_agent = profile and profile.role in ['sales', 'agent']
 
         new_stage_id = serializer.validated_data.get('stage', old_stage)
