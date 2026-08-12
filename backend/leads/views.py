@@ -189,11 +189,12 @@ class LeadViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         profile = getattr(user, 'profile', None)
+        
+        # If sales/agent creates a lead, force it to be unassigned so it goes to admin
         if profile and profile.role in ['sales', 'agent']:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You do not have permission to create leads.")
-            
-        lead = serializer.save()
+            lead = serializer.save(assigned_to=None)
+        else:
+            lead = serializer.save()
         LeadAuditLog.objects.create(
             lead=lead,
             user=self.request.user if self.request.user.is_authenticated else None,

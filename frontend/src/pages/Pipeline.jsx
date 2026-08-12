@@ -213,7 +213,7 @@ const Pipeline = () => {
           <Link to="/leads" className="btn-secondary" style={{ flex: isMobile ? 1 : 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}>
             <ListIcon size={16} /> Table
           </Link>
-          {user && !['sales', 'agent'].includes(user.role) && (
+          {user && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="btn-primary"

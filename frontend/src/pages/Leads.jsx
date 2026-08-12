@@ -278,7 +278,7 @@ const Leads = () => {
               <Upload size={18} /> Import
             </button>
           )}
-          {user && !['sales', 'agent'].includes(user.role) && (
+          {user && (
             <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <Plus size={20} /> Create Lead
             </button>
