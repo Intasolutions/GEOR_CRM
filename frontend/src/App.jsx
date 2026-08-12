@@ -140,6 +140,7 @@ const ProtectedLayout = ({ children }) => {
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" />
           {user?.permissions?.leads?.view !== false && <SidebarLink to="/leads" icon={Users} label="Table View" />}
           {user?.permissions?.pipeline?.view !== false && <SidebarLink to="/pipeline" icon={Trello} label="Sales Pipeline" />}
+          {user?.permissions?.campaigns?.view !== false && <SidebarLink to="/campaigns" icon={Megaphone} label="Campaigns" />}
           
           <div style={{ fontSize: '11px', fontWeight: '400', color: '#64748b', padding: '16px 12px 6px 12px' }}>Analytics</div>
           {user?.permissions?.reports?.view !== false && <SidebarLink to="/reports" icon={BarChart3} label="Analytics" />}
