@@ -105,6 +105,7 @@ class LeadSerializer(serializers.ModelSerializer):
     forecasted_value = serializers.SerializerMethodField()
     has_pending_reminder = serializers.SerializerMethodField()
     is_at_risk = serializers.BooleanField(read_only=True)
+    collect_demographics = serializers.ReadOnlyField(source='campaign.collect_demographics', default=True)
 
     class Meta:
         model = Lead

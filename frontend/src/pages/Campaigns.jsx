@@ -25,7 +25,8 @@ const Campaigns = () => {
     budget: 0,
     assigned_users: [],
     start_date: '',
-    end_date: ''
+    end_date: '',
+    collect_demographics: true
   });
 
   useEffect(() => {
@@ -82,7 +83,8 @@ const Campaigns = () => {
       budget: camp.budget,
       assigned_users: camp.assigned_users || [],
       start_date: camp.start_date || '',
-      end_date: camp.end_date || ''
+      end_date: camp.end_date || '',
+      collect_demographics: camp.collect_demographics !== false
     });
     setIsModalOpen(true);
   };
@@ -319,6 +321,19 @@ const Campaigns = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+                    <input 
+                      type="checkbox" 
+                      id="collect_demographics" 
+                      checked={formData.collect_demographics} 
+                      onChange={e => setFormData({ ...formData, collect_demographics: e.target.checked })}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--brand-blue)' }}
+                    />
+                    <label htmlFor="collect_demographics" style={{ fontSize: '13px', fontWeight: '600', cursor: 'pointer', userSelect: 'none' }}>
+                      Collect Student Demographics (Age, Place, Qualification)
+                    </label>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>

@@ -755,25 +755,27 @@ const LeadDetails = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.05em' }}>About</h3>
-                  <button 
-                    onClick={() => setIsDataModalOpen(true)}
-                    style={{ 
-                      background: '#ef4444', 
-                      color: 'white', 
-                      border: 'none', 
-                      padding: '8px 16px', 
-                      borderRadius: '8px', 
-                      fontSize: '13px', 
-                      fontWeight: '700', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
-                    }}
-                  >
-                    <Plus size={14} /> Add Data
-                  </button>
+                  {lead.collect_demographics !== false && (
+                    <button 
+                      onClick={() => setIsDataModalOpen(true)}
+                      style={{ 
+                        background: '#ef4444', 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '8px 16px', 
+                        borderRadius: '8px', 
+                        fontSize: '13px', 
+                        fontWeight: '700', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                      }}
+                    >
+                      <Plus size={14} /> Add Data
+                    </button>
+                  )}
                 </div>
                 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -836,35 +838,39 @@ const LeadDetails = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                    <UserCheck size={16} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Age</p>
-                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.age || '—'}</p>
-                  </div>
-                </div>
+                {lead.collect_demographics !== false && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        <UserCheck size={16} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Age</p>
+                        <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.age || '—'}</p>
+                      </div>
+                    </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                    <MapPin size={16} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Place</p>
-                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.place || '—'}</p>
-                  </div>
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        <MapPin size={16} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Place</p>
+                        <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.place || '—'}</p>
+                      </div>
+                    </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                    <GraduationCap size={16} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Qualification</p>
-                    <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.qualification || '—'}</p>
-                  </div>
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        <GraduationCap size={16} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Qualification</p>
+                        <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.qualification || '—'}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {lead.lost_reason && (() => {
                   const stageName = lead.stage_name?.toLowerCase() || '';
