@@ -761,18 +761,18 @@ const LeadDetails = () => {
                       background: '#ef4444', 
                       color: 'white', 
                       border: 'none', 
-                      padding: '4px 10px', 
+                      padding: '8px 16px', 
                       borderRadius: '8px', 
-                      fontSize: '11px', 
+                      fontSize: '13px', 
                       fontWeight: '700', 
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '6px',
                       boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
                     }}
                   >
-                    <Plus size={12} /> Add Data
+                    <Plus size={14} /> Add Data
                   </button>
                 </div>
                 
