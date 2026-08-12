@@ -5,7 +5,7 @@ import {
   ArrowLeft, Mail, Phone, Building, Calendar, 
   Clock, Plus, MessageSquare, PhoneCall, MailCheck, 
   CheckCircle2, AlertCircle, MoreVertical, Database, 
-  FileText, Trash2, Edit3, Edit, UserCheck, Search, Filter, MessageCircle,
+  FileText, Trash2, Edit3, Edit, User, UserCheck, Search, Filter, MessageCircle,
   TrendingUp, Paperclip, Download, X, Sparkles, Receipt, Send, Share2,
   MapPin, GraduationCap
 } from 'lucide-react';
@@ -755,7 +755,7 @@ const LeadDetails = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-secondary)', margin: 0, letterSpacing: '0.05em' }}>About</h3>
-                  {lead.collect_demographics !== false && (
+                  {lead?.collect_demographics !== false && (
                     <button 
                       onClick={() => setIsDataModalOpen(true)}
                       style={{ 
@@ -838,7 +838,7 @@ const LeadDetails = () => {
                   </div>
                 </div>
 
-                {lead.collect_demographics !== false && (
+                {lead?.collect_demographics !== false && (
                   <>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
