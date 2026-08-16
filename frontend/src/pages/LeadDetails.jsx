@@ -339,16 +339,31 @@ const LeadDetails = () => {
     formData.append('file_name', finalName);
     formData.append('file_size', file.size);
 
+    const uploadToast = toast.loading(isRecording ? 'Uploading recording...' : 'Uploading document...');
     setUploading(true);
     try {
       await api.post('documents/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      toast.success(isRecording ? 'Recording uploaded successfully!' : 'Document uploaded successfully!', { id: uploadToast });
       fetchData();
     } catch (err) {
       console.error(err);
+      let errorMsg = 'Upload failed';
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else {
+          errorMsg = JSON.stringify(data);
+        }
+      }
+      toast.error(`Error: ${errorMsg}`, { id: uploadToast });
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
