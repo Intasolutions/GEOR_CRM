@@ -609,7 +609,7 @@ const LeadDetails = () => {
       </div>
 
       {/* Follow-up Accountability Banner */}
-      {!lead.is_final && lead.last_contacted_at && !lead.has_pending_reminder && (
+      {lead.is_at_risk && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

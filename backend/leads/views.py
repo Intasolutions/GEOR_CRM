@@ -48,10 +48,11 @@ class LeadViewSet(viewsets.ModelViewSet):
         else:
             queryset = Lead.objects.all()
 
-        # Annotate with 'is_at_risk' (Contacted or beyond 'New' stage, but no future reminder)
+        # Annotate with 'is_at_risk' (No active future reminder, excluding lost and next intake stages)
         now = timezone.now()
         future_reminders = Reminder.objects.filter(
             lead=OuterRef('pk'),
+            status__in=['pending', 'due', 'snoozed', 'rescheduled'],
             scheduled_at__gt=now
         )
         
@@ -74,7 +75,9 @@ class LeadViewSet(viewsets.ModelViewSet):
         queryset = queryset.annotate(
             is_at_risk=Case(
                 When(
-                    (Q(last_contacted_at__lt=now - timedelta(days=7)) | Q(last_contacted_at__isnull=True)) & ~Exists(future_reminders),
+                    ~Q(stage__name__icontains='lost') & 
+                    ~Q(stage__name__icontains='next intake') & 
+                    ~Exists(future_reminders),
                     then=Value(True)
                 ),
                 default=Value(False),
