@@ -132,11 +132,18 @@ const Pipeline = () => {
       const currentLead = leads.find(l => l.id == leadId);
       const currentStageObj = stages.find(s => s.id === currentLead?.stage);
       const targetStage = stages.find(s => s.id === stageId);
+      const currentNameLower = (currentStageObj?.name || '').toLowerCase();
+      const targetNameLower = (targetStage?.name || '').toLowerCase();
+
+      // Disallow moving to Next Intake if already in Lost or Next Intake stage
+      if ((currentNameLower.includes('lost') || currentNameLower.includes('intake')) && targetNameLower.includes('intake')) {
+        toast.error("Leads in Lost or Next Intake stages cannot be moved to Next Intake.");
+        return;
+      }
 
       const isSalesOrAgent = user && ['sales', 'agent'].includes(user.role);
       if (isSalesOrAgent && currentStageObj && targetStage && currentStageObj.id !== targetStage.id) {
-        const SPECIAL_STAGES = ['lost', 'next intake', 'domestic'];
-        const targetNameLower = targetStage.name.toLowerCase();
+        const SPECIAL_STAGES = ['lost', 'intake', 'domestic'];
         const isSpecial = SPECIAL_STAGES.some(s => targetNameLower.includes(s));
 
         if (!isSpecial && targetStage.order !== currentStageObj.order + 1) {
@@ -150,7 +157,7 @@ const Pipeline = () => {
 
       let payload = { stage: stageId };
       
-      if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
+      if (targetStage && (targetNameLower.includes('lost') || targetNameLower.includes('intake') || targetNameLower.includes('domestic'))) {
         const reason = window.prompt("Please enter the reason (mandatory):");
         if (reason === null || reason.trim() === '') {
           import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));

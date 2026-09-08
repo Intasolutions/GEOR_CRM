@@ -64,7 +64,7 @@ const Dashboard = () => {
       if (!l.is_at_risk) return false;
       const stageObj = stages.find(s => s.id === l.stage);
       const stageName = (stageObj?.name || l.stage_name || '').toLowerCase();
-      return !['lost', 'next intake', 'domestic'].some(s => stageName.includes(s));
+      return !['lost', 'intake', 'domestic'].some(s => stageName.includes(s));
     });
   }, [leads, stages]);
 
@@ -110,7 +110,7 @@ const Dashboard = () => {
           const active = leadsData.filter(l => !l.is_final).length;
           const isWon = (l) => {
             const name = (l.stage_name || '').toLowerCase();
-            return (name.includes('won') || l.probability === 100) && !name.includes('lost') && !name.includes('next intake');
+            return (name.includes('won') || l.probability === 100) && !name.includes('lost') && !name.includes('intake');
           };
           const won = leadsData.filter(isWon).length;
           const pipelineValue = leadsData.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
@@ -127,10 +127,15 @@ const Dashboard = () => {
 
         if (followupsRes.status === 'fulfilled') {
           const followupsData = followupsRes.value.data;
-          setReminders(followupsData);
+          // Filter out reminders for leads in Lost or Intake stages
+          const activeFollowups = followupsData.filter(r => {
+            const stage = (r.lead_stage_name || '').toLowerCase();
+            return !stage.includes('lost') && !stage.includes('intake');
+          });
+          setReminders(activeFollowups);
           setStats(prev => ({
             ...prev,
-            pendingFollowups: followupsData.filter(r => r.status === 'pending').length
+            pendingFollowups: activeFollowups.filter(r => r.status === 'pending').length
           }));
         }
 

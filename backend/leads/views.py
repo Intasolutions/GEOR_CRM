@@ -39,7 +39,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         if is_sales_or_agent:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
             # Hide lost, next intake and domestic leads from sales/agent users
-            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake') | Q(stage__name__icontains='domestic'))
+            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='intake') | Q(stage__name__icontains='domestic'))
         elif is_marketer:
             queryset = Lead.objects.filter(
                 Q(age__isnull=False) |
@@ -77,7 +77,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             is_at_risk=Case(
                 When(
                     ~Q(stage__name__icontains='lost') & 
-                    ~Q(stage__name__icontains='next intake') & 
+                    ~Q(stage__name__icontains='intake') & 
                     ~Exists(future_reminders),
                     then=Value(True)
                 ),
@@ -247,9 +247,16 @@ class LeadViewSet(viewsets.ModelViewSet):
         else:
             new_stage_obj = old_stage  # unchanged
 
+        if old_stage and new_stage_obj and old_stage != new_stage_obj:
+            old_name_lower = old_stage.name.lower()
+            new_name_lower = new_stage_obj.name.lower()
+            if ('lost' in old_name_lower or 'intake' in old_name_lower) and 'intake' in new_name_lower:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Leads in 'Lost' or 'Next Intake' stages cannot be moved to 'Next Intake'.")
+
         if is_sales_or_agent and new_stage_obj and old_stage and new_stage_obj != old_stage:
             # Special exit stages are always allowed
-            SPECIAL_STAGES = ['lost', 'next intake', 'domestic']
+            SPECIAL_STAGES = ['lost', 'intake', 'domestic']
             new_stage_name_lower = new_stage_obj.name.lower()
             is_special = any(s in new_stage_name_lower for s in SPECIAL_STAGES)
 
@@ -289,6 +296,11 @@ class LeadViewSet(viewsets.ModelViewSet):
         
         # Log Stage Change
         if old_stage != new_stage:
+            # When moving to Lost or Intake, automatically delete all pending reminders for this lead
+            new_stage_name_lower = (new_stage.name if new_stage else '').lower()
+            if 'lost' in new_stage_name_lower or 'intake' in new_stage_name_lower:
+                Reminder.objects.filter(lead=new_instance, status='pending').delete()
+
             Activity.objects.create(
                 lead=new_instance,
                 user=self.request.user if self.request.user.is_authenticated else None,
@@ -548,7 +560,7 @@ class LeadViewSet(viewsets.ModelViewSet):
         # Flexible and robust Won leads detection
         won_leads = base_leads.filter(
             Q(stage__name__icontains='won') | Q(stage__probability=100)
-        ).exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='next intake'))
+        ).exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='intake'))
         
         total_leads_count = base_leads.count()
         won_count = won_leads.count()
@@ -660,6 +672,9 @@ class ReminderViewSet(viewsets.ModelViewSet):
         lead_id = self.request.query_params.get('lead')
         if lead_id:
             queryset = queryset.filter(lead_id=lead_id)
+        else:
+            # Exclude reminders for leads in Lost or Intake stages from general views
+            queryset = queryset.exclude(Q(lead__stage__name__icontains='lost') | Q(lead__stage__name__icontains='intake'))
         return queryset.order_by('scheduled_at')
 
     def paginate_queryset(self, queryset):
@@ -675,9 +690,9 @@ class ReminderViewSet(viewsets.ModelViewSet):
         
         # Block scheduling follow-up / next date for Lost and Next Intake stages
         stage_name_lower = (lead.stage.name if lead and lead.stage else '').lower()
-        if 'lost' in stage_name_lower or 'next intake' in stage_name_lower:
+        if 'lost' in stage_name_lower or 'intake' in stage_name_lower:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Follow-up / next dates cannot be added to leads in Lost or Next Intake stages.")
+            raise ValidationError("Next date / follow-up cannot be added to leads in Lost or Next Intake stages.")
         
         is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
         if not is_admin_or_manager:
@@ -713,9 +728,9 @@ class ReminderViewSet(viewsets.ModelViewSet):
         
         # Block scheduling follow-up / next date for Lost and Next Intake stages
         stage_name_lower = (lead.stage.name if lead and lead.stage else '').lower()
-        if 'lost' in stage_name_lower or 'next intake' in stage_name_lower:
+        if 'lost' in stage_name_lower or 'intake' in stage_name_lower:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Follow-up / next dates cannot be scheduled or modified for leads in Lost or Next Intake stages.")
+            raise ValidationError("Next date / follow-up cannot be scheduled or modified for leads in Lost or Next Intake stages.")
 
         is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
         

@@ -153,9 +153,20 @@ const Leads = () => {
     if (!targetStageId) return;
 
     const targetStage = stages.find(s => s.id === parseInt(targetStageId));
+    const targetNameLower = (targetStage?.name || '').toLowerCase();
+    
+    // Disallow moving leads in Lost or Next Intake to Next Intake
+    if (targetNameLower.includes('intake')) {
+      const invalidLead = leads.find(l => selectedLeads.includes(l.id) && ((l.stage_name || '').toLowerCase().includes('lost') || (l.stage_name || '').toLowerCase().includes('intake')));
+      if (invalidLead) {
+        toast.error("Leads in Lost or Next Intake stages cannot be moved to Next Intake.");
+        return;
+      }
+    }
+
     let lostReason = null;
 
-    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
+    if (targetStage && (targetNameLower.includes('lost') || targetNameLower.includes('intake') || targetNameLower.includes('domestic'))) {
       const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
         import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));

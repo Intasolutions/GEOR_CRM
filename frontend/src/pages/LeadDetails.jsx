@@ -184,25 +184,33 @@ const LeadDetails = () => {
   };
 
   const isLostOrNextIntake = (stageNameOrObj) => {
-    const name = (typeof stageNameOrObj === 'string' 
+    const raw = typeof stageNameOrObj === 'string' 
       ? stageNameOrObj 
-      : (stageNameOrObj?.name || lead?.stage_name || '')).toLowerCase();
-    return name.includes('lost') || name.includes('next intake');
+      : (stageNameOrObj?.name || lead?.stage_name || '');
+    const clean = (raw || '').toLowerCase().replace(/\s+/g, ' ');
+    return clean.includes('lost') || clean.includes('intake');
   };
 
   const isStageUpdateDisabled = (targetStage) => {
     if (!lead || !user || !targetStage) return false;
-    const isSalesOrAgent = ['sales', 'agent'].includes(user.role);
-    if (!isSalesOrAgent) return false; // Admins and managers can do anything
     
     // Find lead's current stage object
     const currentStageObj = stages.find(s => s.id === lead.stage);
+    const currentName = (currentStageObj?.name || lead?.stage_name || '').toLowerCase();
+    const targetName = (targetStage?.name || '').toLowerCase();
+    
+    // Disallow moving to Next Intake if currently in Lost or Next Intake stage
+    if ((currentName.includes('lost') || currentName.includes('intake')) && targetName.includes('intake')) {
+      return true;
+    }
+
+    const isSalesOrAgent = ['sales', 'agent'].includes(user.role);
+    if (!isSalesOrAgent) return false; // Admins and managers can do anything
     if (!currentStageObj) return false;
 
     // Check if it's a special stage (Lost, Next Intake, Domestic)
-    const SPECIAL_STAGES = ['lost', 'next intake', 'domestic'];
-    const targetNameLower = targetStage.name.toLowerCase();
-    const isSpecial = SPECIAL_STAGES.some(s => targetNameLower.includes(s));
+    const SPECIAL_STAGES = ['lost', 'intake', 'domestic'];
+    const isSpecial = SPECIAL_STAGES.some(s => targetName.includes(s));
 
     if (isSpecial) return false; // Special stages are always selectable
 
@@ -213,6 +221,12 @@ const LeadDetails = () => {
   const handleUpdateLeadStage = async (stageId) => {
     const targetStage = stages.find(s => s.id == stageId);
     if (isStageUpdateDisabled(targetStage)) {
+      const currentName = (stages.find(s => s.id === lead.stage)?.name || lead?.stage_name || '').toLowerCase();
+      const targetName = (targetStage?.name || '').toLowerCase();
+      if ((currentName.includes('lost') || currentName.includes('intake')) && targetName.includes('intake')) {
+        toast.error("Leads in Lost or Next Intake stages cannot be moved to Next Intake.");
+        return;
+      }
       toast.error("You can only move to the next sequential stage.");
       return;
     }
@@ -224,7 +238,7 @@ const LeadDetails = () => {
 
     let payload = { stage: stageId };
     
-    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('next intake') || targetStage.name.toLowerCase().includes('domestic'))) {
+    if (targetStage && (targetStage.name.toLowerCase().includes('lost') || targetStage.name.toLowerCase().includes('intake') || targetStage.name.toLowerCase().includes('domestic'))) {
       const reason = window.prompt("Please enter the reason (mandatory):");
       if (reason === null || reason.trim() === '') {
         import('react-hot-toast').then(m => m.toast.error('A reason is required for this stage.'));
@@ -946,7 +960,7 @@ const LeadDetails = () => {
                 {lead.lost_reason && (() => {
                   const stageName = lead.stage_name?.toLowerCase() || '';
                   const isDomestic = stageName.includes('domestic');
-                  const isNextIntake = stageName.includes('next intake');
+                  const isNextIntake = stageName.includes('intake');
                   const bgColor = isDomestic ? '#dbeafe' : isNextIntake ? '#fef3c7' : '#fee2e2';
                   const iconColor = isDomestic ? '#3b82f6' : isNextIntake ? '#f59e0b' : '#ef4444';
                   const label = isDomestic ? 'Domestic Reason' : isNextIntake ? 'Next Intake Reason' : 'Lost Reason';
@@ -1500,7 +1514,7 @@ const LeadDetails = () => {
             <div style={{ padding: '24px' }}>
               {isLostOrNextIntake(lead?.stage_name) ? (
                 <div style={{ padding: '14px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <AlertCircle size={16} /> Next date cannot be scheduled for {lead?.stage_name || 'this'} stage.
+                  <AlertCircle size={16} /> Next date / intake cannot be scheduled for {lead?.stage_name || 'this'} stage.
                 </div>
               ) : (
                 <button 
@@ -1539,6 +1553,7 @@ const LeadDetails = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <select 
                               value={rem.status}
+                              disabled={isLostOrNextIntake(lead?.stage_name)}
                               onChange={(e) => handleToggleReminderStatus(rem.id, e.target.value)}
                               style={{ 
                                 border: 'none', 

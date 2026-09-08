@@ -20,6 +20,10 @@ const NotificationManager = () => {
         const remindersArr = Array.isArray(res.data) ? res.data : (res.data.results || []);
         
         remindersArr.forEach(rem => {
+          const stageName = (rem.lead_stage_name || '').toLowerCase();
+          if (stageName.includes('lost') || stageName.includes('intake')) {
+            return;
+          }
           if (rem.status === 'pending') {
             const scheduledTime = new Date(rem.scheduled_at);
             const timeDiff = now - scheduledTime;

@@ -159,7 +159,7 @@ class LeadSerializer(serializers.ModelSerializer):
         if not lost_reason and self.instance:
             lost_reason = data.get('lost_reason', self.instance.lost_reason)
 
-        if stage and ('lost' in stage.name.lower() or 'next intake' in stage.name.lower() or 'domestic' in stage.name.lower()):
+        if stage and ('lost' in stage.name.lower() or 'intake' in stage.name.lower() or 'domestic' in stage.name.lower()):
             if not lost_reason or not str(lost_reason).strip():
                 raise serializers.ValidationError({"lost_reason": "A reason must be provided when moving to this stage."})
                 
@@ -191,10 +191,23 @@ class ActivitySerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
 class ReminderSerializer(serializers.ModelSerializer):
+    lead_name = serializers.ReadOnlyField(source='lead.name')
+    lead_stage_name = serializers.ReadOnlyField(source='lead.stage.name')
+
     class Meta:
         model = Reminder
         fields = '__all__'
         read_only_fields = ['user']
+
+    def validate(self, data):
+        lead = data.get('lead')
+        if not lead and self.instance:
+            lead = self.instance.lead
+        if lead and lead.stage:
+            stage_name = lead.stage.name.lower()
+            if 'lost' in stage_name or 'intake' in stage_name:
+                raise serializers.ValidationError("Next date / follow-up cannot be scheduled for leads in Lost or Next Intake stages.")
+        return data
 
 class LeadDocumentSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source='user.username')

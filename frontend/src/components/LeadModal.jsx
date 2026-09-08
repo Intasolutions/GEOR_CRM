@@ -158,7 +158,8 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
   };
 
   const selectedStage = stages.find(s => s.id == formData.stage);
-  const isLostStage = selectedStage && (selectedStage.name.toLowerCase().includes('lost') || selectedStage.name.toLowerCase().includes('next intake'));
+  const selectedStageName = (selectedStage?.name || '').toLowerCase().replace(/\s+/g, ' ');
+  const isLostStage = selectedStage && (selectedStageName.includes('lost') || selectedStageName.includes('intake'));
 
   return (
     <div className="modal-overlay">
