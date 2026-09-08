@@ -373,7 +373,7 @@ const ImportLeads = () => {
                   }}
                 >
                   <h4 style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>Skip Existing {duplicateStrategy === 'skip' && <Check size={18} />}</h4>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Identify duplicates by email and ignore them. Safest option.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Identify duplicates by mobile number or email and skip them. Never creates duplicate mobile numbers.</p>
                 </div>
                 <div 
                    onClick={() => setDuplicateStrategy('overwrite')}
@@ -387,7 +387,7 @@ const ImportLeads = () => {
                   }}
                 >
                   <h4 style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>Overwrite/Merge {duplicateStrategy === 'overwrite' && <Check size={18} />}</h4>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Update existing records with data from this file. Use with caution.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Update existing records matched by mobile number or email with data from this file.</p>
                 </div>
                </div>
                

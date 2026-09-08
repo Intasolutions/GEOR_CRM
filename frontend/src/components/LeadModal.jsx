@@ -22,6 +22,8 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
   });
   const [campaigns, setCampaigns] = useState([]);
   const [users, setUsers] = useState([]);
+  const [phoneDuplicateError, setPhoneDuplicateError] = useState(null);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -75,10 +77,47 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const rawPhone = formData.phone?.trim();
+    if (!rawPhone || rawPhone.length < 5) {
+      setPhoneDuplicateError(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsCheckingPhone(true);
+        const res = await api.get('leads/check_phone/', {
+          params: {
+            phone: rawPhone,
+            lead_id: editLead ? editLead.id : undefined
+          }
+        });
+        if (res.data?.is_duplicate) {
+          const leadInfo = res.data.lead;
+          const assignedText = leadInfo.assigned_to ? ` (Assigned to: ${leadInfo.assigned_to})` : '';
+          setPhoneDuplicateError(`Mobile number already exists for "${leadInfo.name}"${assignedText}. Duplicate mobile numbers are not allowed.`);
+        } else {
+          setPhoneDuplicateError(null);
+        }
+      } catch (err) {
+        // non-blocking
+      } finally {
+        setIsCheckingPhone(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [formData.phone, editLead]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (phoneDuplicateError) {
+      import('react-hot-toast').then(m => m.toast.error(phoneDuplicateError));
+      return;
+    }
     try {
       // Clean up empty strings for IDs so Django doesn't error
       const submissionData = {
@@ -99,8 +138,22 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : (editLead ? 'Failed to update lead' : 'Failed to create lead');
-      import('react-hot-toast').then(m => m.toast.error('Error: ' + errorMsg));
+      const errorData = err.response?.data;
+      let errorMsg = editLead ? 'Failed to update lead' : 'Failed to create lead';
+      if (errorData) {
+        if (typeof errorData === 'string') {
+          errorMsg = errorData;
+        } else if (errorData.phone) {
+          errorMsg = Array.isArray(errorData.phone) ? errorData.phone[0] : errorData.phone;
+        } else if (errorData.non_field_errors) {
+          errorMsg = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
+        } else {
+          errorMsg = Object.entries(errorData)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+            .join(' | ');
+        }
+      }
+      import('react-hot-toast').then(m => m.toast.error(errorMsg));
     }
   };
 
@@ -137,12 +190,23 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Phone</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600' }}>Phone</label>
+                {isCheckingPhone && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Checking...</span>}
+              </div>
               <input 
                 className="glass-input" 
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="e.g. 9876543210"
+                style={phoneDuplicateError ? { borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)' } : {}}
               />
+              {phoneDuplicateError && (
+                <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '5px', fontWeight: '500', display: 'flex', alignItems: 'flex-start', gap: '4px', lineHeight: '1.3' }}>
+                  <span>⚠️</span>
+                  <span>{phoneDuplicateError}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -257,7 +321,15 @@ const LeadModal = ({ isOpen, onClose, onRefresh, editLead = null }) => {
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <button type="button" onClick={onClose} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-            <button type="submit" className="btn-primary" style={{ flex: 1 }}>{editLead ? 'Save Changes' : 'Create Lead'}</button>
+            <button 
+              type="submit" 
+              className="btn-primary" 
+              disabled={Boolean(phoneDuplicateError)}
+              title={phoneDuplicateError || ''}
+              style={{ flex: 1, opacity: phoneDuplicateError ? 0.6 : 1, cursor: phoneDuplicateError ? 'not-allowed' : 'pointer' }}
+            >
+              {editLead ? 'Save Changes' : 'Create Lead'}
+            </button>
           </div>
         </form>
       </div>

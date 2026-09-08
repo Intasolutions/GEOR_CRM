@@ -6,7 +6,9 @@ from .models import (
     Workflow, WorkflowLog, CallRecord, InternalTask,
     Quotation, QuotationItem
 )
+from django.db.models import Q
 from .models_integrations import IntegrationSetting
+from .utils_phone import normalize_phone
 
 class IntegrationSettingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,7 +114,8 @@ class LeadSerializer(serializers.ModelSerializer):
         model = Lead
         fields = '__all__'
         extra_kwargs = {
-            'audit_logs': {'read_only': True}
+            'audit_logs': {'read_only': True},
+            'phone': {'validators': []}
         }
 
     def get_has_pending_reminder(self, obj):
@@ -123,6 +126,29 @@ class LeadSerializer(serializers.ModelSerializer):
         if obj.stage and obj.deal_value:
             return (obj.deal_value * obj.stage.probability) / 100
         return 0.00
+
+    def validate_phone(self, value):
+        if not value:
+            return None
+        norm_phone = normalize_phone(value)
+        if not norm_phone:
+            return None
+
+        duplicate_filter = Q(phone=norm_phone) | Q(phone=value)
+        if len(norm_phone) >= 10:
+            duplicate_filter |= Q(phone__endswith=norm_phone[-10:])
+
+        qs = Lead.objects.filter(duplicate_filter)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+
+        existing = qs.first()
+        if existing:
+            assigned_str = f" assigned to {existing.assigned_to.username}" if existing.assigned_to else ""
+            raise serializers.ValidationError(
+                f"Mobile number '{value}' already exists for lead '{existing.name}'{assigned_str}. Duplicate mobile numbers are not allowed."
+            )
+        return norm_phone
 
     def validate(self, data):
         stage = data.get('stage')

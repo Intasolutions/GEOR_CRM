@@ -94,7 +94,23 @@ class Lead(models.Model):
             
         return min(score, 100)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['phone'],
+                name='unique_lead_phone',
+                condition=models.Q(phone__isnull=False) & ~models.Q(phone='')
+            )
+        ]
+
     def save(self, *args, **kwargs):
+        # Normalize and clean phone
+        if self.phone:
+            from .utils_phone import normalize_phone
+            self.phone = normalize_phone(self.phone)
+        elif self.phone == '':
+            self.phone = None
+            
         # Auto-calculate score on save
         self.lead_score = self.calculate_score()
         super().save(*args, **kwargs)

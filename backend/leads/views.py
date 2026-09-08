@@ -15,6 +15,7 @@ from .serializers import (
     QuotationSerializer, QuotationItemSerializer
 )
 from .utils_automation import process_workflows, summarize_lead_activities
+from .utils_phone import normalize_phone
 from django.contrib.auth.models import User
 from django.db.models import Q, Sum, Count, F
 from django.utils import timezone
@@ -348,6 +349,38 @@ class LeadViewSet(viewsets.ModelViewSet):
             'top_qualifications': quals_data,
         })
 
+    @action(detail=False, methods=['get'])
+    def check_phone(self, request):
+        phone_input = request.query_params.get('phone')
+        lead_id = request.query_params.get('lead_id')
+        
+        norm_phone = normalize_phone(phone_input)
+        if not norm_phone:
+            return Response({'is_duplicate': False})
+            
+        duplicate_filter = Q(phone=norm_phone) | Q(phone=phone_input)
+        if len(norm_phone) >= 10:
+            duplicate_filter |= Q(phone__endswith=norm_phone[-10:])
+            
+        qs = Lead.objects.filter(duplicate_filter)
+        if lead_id:
+            try:
+                qs = qs.exclude(pk=int(lead_id))
+            except ValueError:
+                pass
+                
+        existing = qs.first()
+        if existing:
+            return Response({
+                'is_duplicate': True,
+                'lead': {
+                    'id': existing.id,
+                    'name': existing.name,
+                    'assigned_to': existing.assigned_to.username if existing.assigned_to else None,
+                    'stage': existing.stage.name if existing.stage else None
+                }
+            })
+        return Response({'is_duplicate': False})
 
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):
@@ -370,6 +403,7 @@ class LeadViewSet(viewsets.ModelViewSet):
             
             # Get default stage if not provided
             default_stage = LeadStage.objects.order_by('order').first()
+            seen_phones_in_batch = set()
             
             for data in leads_data:
                 # IMPORTANT: Remove any 'id' field to prevent UNIQUE constraint collisions
@@ -379,18 +413,30 @@ class LeadViewSet(viewsets.ModelViewSet):
                 import_note_3 = data.pop('import_note_3', None)
                 
                 email = data.get('email')
-                phone = data.get('phone')
+                phone = normalize_phone(data.get('phone'))
+                data['phone'] = phone
+                
                 # Treat common filler values as None to prevent false duplicate matches
                 if email and str(email).lower().strip() in ['', 'na', 'n/a', 'none', 'null']:
                     email = None
                     data['email'] = None # Clean the data for saving
                 
-                # Try to find existing lead by email OR phone
+                # Disallow duplicates within the same batch
+                if phone:
+                    if phone in seen_phones_in_batch:
+                        results['skipped'] += 1
+                        continue
+                    seen_phones_in_batch.add(phone)
+                
+                # Try to find existing lead by email OR normalized phone
                 existing_lead = None
                 if email:
                     existing_lead = Lead.objects.filter(email=email).first()
                 if not existing_lead and phone:
-                    existing_lead = Lead.objects.filter(phone=phone).first()
+                    phone_q = Q(phone=phone)
+                    if len(phone) >= 10:
+                        phone_q |= Q(phone__endswith=phone[-10:])
+                    existing_lead = Lead.objects.filter(phone_q).first()
                     
                 # Ensure stage is present or use default
                 if not data.get('stage') and default_stage:
