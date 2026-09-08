@@ -169,6 +169,27 @@ const LeadDetails = () => {
     }
   };
 
+  const hasUploadOrRecordingForCurrentStage = () => {
+    if (!lead) return false;
+    if (user && ['admin', 'manager'].includes(user.role)) return true;
+
+    // Find the last "Stage Changed" entry in audit logs
+    const lastStageChange = auditLogs?.find(a => a.action === 'Stage Changed');
+    const cutoff = lastStageChange ? new Date(lastStageChange.timestamp).getTime() : new Date(lead.created_at).getTime();
+
+    const hasDoc = documents?.some(d => new Date(d.uploaded_at).getTime() >= cutoff);
+    const hasCall = lead.call_records?.some(c => new Date(c.timestamp).getTime() >= cutoff);
+
+    return hasDoc || hasCall;
+  };
+
+  const isLostOrNextIntake = (stageNameOrObj) => {
+    const name = (typeof stageNameOrObj === 'string' 
+      ? stageNameOrObj 
+      : (stageNameOrObj?.name || lead?.stage_name || '')).toLowerCase();
+    return name.includes('lost') || name.includes('next intake');
+  };
+
   const isStageUpdateDisabled = (targetStage) => {
     if (!lead || !user || !targetStage) return false;
     const isSalesOrAgent = ['sales', 'agent'].includes(user.role);
@@ -193,6 +214,11 @@ const LeadDetails = () => {
     const targetStage = stages.find(s => s.id == stageId);
     if (isStageUpdateDisabled(targetStage)) {
       toast.error("You can only move to the next sequential stage.");
+      return;
+    }
+
+    if (!hasUploadOrRecordingForCurrentStage()) {
+      toast.error(`Mandatory: You must upload a call record or document in the current stage before moving to '${targetStage?.name || 'next stage'}'.`);
       return;
     }
 
@@ -433,9 +459,31 @@ const LeadDetails = () => {
     }
   };
 
+  const handleOpenScheduleReminder = () => {
+    if (isLostOrNextIntake(lead?.stage_name)) {
+      toast.error("Follow-up / next dates cannot be scheduled for leads in Lost or Next Intake stages.");
+      return;
+    }
+    if (!hasUploadOrRecordingForCurrentStage()) {
+      toast.error("Mandatory: You must upload a document or call recording before scheduling a next date.");
+      return;
+    }
+    setShowReminderModal(true);
+  };
+
   const handleScheduleReminder = async (e) => {
     e.preventDefault();
     if (!reminderNote || !reminderDate) return;
+
+    if (isLostOrNextIntake(lead?.stage_name)) {
+      toast.error("Follow-up / next dates cannot be scheduled for leads in Lost or Next Intake stages.");
+      return;
+    }
+
+    if (!hasUploadOrRecordingForCurrentStage()) {
+      toast.error("Mandatory: You must upload a document or call recording before scheduling a follow-up date.");
+      return;
+    }
     try {
       const payload = {
         lead: id,
@@ -477,6 +525,10 @@ const LeadDetails = () => {
   };
 
   const openEditReminder = (rem) => {
+    if (isLostOrNextIntake(lead?.stage_name)) {
+      toast.error("Follow-up / next dates cannot be modified for leads in Lost or Next Intake stages.");
+      return;
+    }
     setEditingReminderId(rem.id);
     setReminderNote(rem.note || '');
     if (rem.scheduled_at) {
@@ -490,6 +542,10 @@ const LeadDetails = () => {
   };
 
   const handleToggleReminderStatus = async (reminderId, newStatus) => {
+    if (newStatus === 'completed') {
+      toast.error("Completed option is removed. Follow-up is updated via stage progression and uploading records.");
+      return;
+    }
     try {
       await api.patch(`reminders/${reminderId}/`, { status: newStatus });
       fetchData();
@@ -1442,13 +1498,19 @@ const LeadDetails = () => {
             </div>
             
             <div style={{ padding: '24px' }}>
-              <button 
-                className="btn-primary" 
-                onClick={() => setShowReminderModal(true)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '24px', padding: '12px 16px', borderRadius: '12px', background: 'var(--brand-blue)', color: 'white' }}
-              >
-                <Plus size={16} /> Schedule Task
-              </button>
+              {isLostOrNextIntake(lead?.stage_name) ? (
+                <div style={{ padding: '14px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <AlertCircle size={16} /> Next date cannot be scheduled for {lead?.stage_name || 'this'} stage.
+                </div>
+              ) : (
+                <button 
+                  className="btn-primary" 
+                  onClick={handleOpenScheduleReminder}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '24px', padding: '12px 16px', borderRadius: '12px', background: 'var(--brand-blue)', color: 'white' }}
+                >
+                  <Plus size={16} /> Schedule Task
+                </button>
+              )}
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <AnimatePresence>
@@ -1461,7 +1523,9 @@ const LeadDetails = () => {
                     >
                       <AlertCircle size={24} style={{ color: 'var(--text-secondary)', margin: '0 auto 12px', opacity: 0.5 }} />
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No reminders scheduled.</p>
-                      <button onClick={() => setShowReminderModal(true)} style={{ background: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '700', marginTop: '12px' }}>Click to add one</button>
+                      {!isLostOrNextIntake(lead?.stage_name) && (
+                        <button onClick={handleOpenScheduleReminder} style={{ background: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '700', marginTop: '12px' }}>Click to add one</button>
+                      )}
                     </motion.div>
                   ) : (
                     reminders.sort((a,b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).map(rem => (
@@ -1469,43 +1533,27 @@ const LeadDetails = () => {
                         key={rem.id} 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        style={{ padding: '16px', borderLeft: `4px solid ${rem.status === 'pending' ? 'var(--brand-blue)' : '#22c55e'}`, background: 'var(--bg-tertiary)', borderRadius: '0 8px 8px 0', opacity: rem.status === 'completed' ? 0.6 : 1, transition: 'all 0.3s' }}
+                        style={{ padding: '16px', borderLeft: `4px solid ${rem.status === 'pending' ? 'var(--brand-blue)' : '#f59e0b'}`, background: 'var(--bg-tertiary)', borderRadius: '0 8px 8px 0', transition: 'all 0.3s' }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <button 
-                              onClick={() => handleToggleReminderStatus(rem.id, rem.status)}
-                              style={{ 
-                                background: 'none', 
-                                border: 'none', 
-                                padding: 0, 
-                                cursor: 'pointer', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                color: rem.status === 'pending' ? 'var(--text-secondary)' : '#22c55e'
-                              }}
-                            >
-                              <CheckCircle2 size={16} fill={rem.status === 'completed' ? 'currentColor' : 'none'} color={rem.status === 'completed' ? '#fff' : 'currentColor'} />
-                            </button>
                             <select 
                               value={rem.status}
                               onChange={(e) => handleToggleReminderStatus(rem.id, e.target.value)}
                               style={{ 
                                 border: 'none', 
-                                background: rem.status === 'completed' ? 'rgba(34, 197, 94, 0.1)' : rem.status === 'missed' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', 
+                                background: rem.status === 'missed' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', 
                                 fontSize: '11px', 
                                 fontWeight: '800', 
                                 cursor: 'pointer', 
-                                color: rem.status === 'completed' ? '#22c55e' : rem.status === 'missed' ? '#ef4444' : 'var(--brand-blue)', 
+                                color: rem.status === 'missed' ? '#ef4444' : 'var(--brand-blue)', 
                                 padding: '4px 8px', 
-                                borderRadius: '6px',
+                                borderRadius: '6px', 
                                 outline: 'none',
                                 textTransform: 'uppercase'
                               }}
                             >
                               <option value="pending">Pending</option>
-                              <option value="completed">Completed</option>
                               <option value="missed">Missed</option>
                               <option value="snoozed">Snoozed</option>
                             </select>
@@ -1513,14 +1561,14 @@ const LeadDetails = () => {
                               Task
                             </span>
                           </div>
-                          {rem.status === 'pending' && (
+                          {rem.status === 'pending' && !isLostOrNextIntake(lead?.stage_name) && (
                             <button onClick={() => openEditReminder(rem)} style={{ background: 'none', border: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Edit3 size={12} /> Edit
                             </button>
                           )}
                         </div>
-                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: '1.4', textDecoration: rem.status === 'completed' ? 'line-through' : 'none', paddingLeft: '24px' }}>{rem.note}</p>
-                        <div style={{ fontSize: '11px', fontWeight: '600', color: rem.status === 'completed' ? 'var(--text-secondary)' : 'var(--brand-blue)', display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '24px' }}>
+                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: '1.4', paddingLeft: '4px' }}>{rem.note}</p>
+                        <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--brand-blue)', display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '4px' }}>
                           <Calendar size={12} /> {new Date(rem.scheduled_at).toLocaleDateString()} at {new Date(rem.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                         </div>
                       </motion.div>

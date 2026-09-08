@@ -40,7 +40,10 @@ const Reports = () => {
     if (!users.length || !leads.length) return [];
     return users.map(u => {
       const userLeads = leads.filter(l => l.assigned_to === u.id);
-      const won = userLeads.filter(l => l.stage_name?.toLowerCase() === 'closed won');
+      const won = userLeads.filter(l => {
+        const name = (l.stage_name || '').toLowerCase();
+        return (name.includes('won') || l.probability === 100) && !name.includes('lost') && !name.includes('next intake');
+      });
       const conversionRate = userLeads.length ? Math.round((won.length / userLeads.length) * 100) : 0;
       const pipelineValue = userLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
       const wonValue = won.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);

@@ -108,7 +108,11 @@ const Dashboard = () => {
         if (leadsRes.status === 'fulfilled') {
           const leadsData = leadsRes.value.data;
           const active = leadsData.filter(l => !l.is_final).length;
-          const won = leadsData.filter(l => l.stage_name === 'Closed Won').length;
+          const isWon = (l) => {
+            const name = (l.stage_name || '').toLowerCase();
+            return (name.includes('won') || l.probability === 100) && !name.includes('lost') && !name.includes('next intake');
+          };
+          const won = leadsData.filter(isWon).length;
           const pipelineValue = leadsData.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
 
           setLeads(leadsData);
@@ -613,26 +617,21 @@ const Dashboard = () => {
                   position: 'relative',
                   transition: 'background 0.2s'
                 }}>
-                  <button
-                    onClick={() => handleToggleReminderStatus(rem.id, rem.status)}
+                  <div
                     style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '12px',
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-secondary)',
+                      background: 'rgba(59, 130, 246, 0.08)',
+                      color: 'var(--brand-blue)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      border: 'none',
-                      cursor: 'pointer',
                       flexShrink: 0
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--success)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
                   >
-                    <CheckCircle2 size={18} />
-                  </button>
+                    <Clock size={18} />
+                  </div>
                   <div
                     onClick={() => navigate(`/leads/${rem.lead}`)}
                     style={{ cursor: 'pointer', flex: 1 }}
