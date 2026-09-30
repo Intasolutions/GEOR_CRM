@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Search, Filter, MoreHorizontal, User, Mail, Phone,
   Users, Upload, Trash2, AlertCircle, CheckCircle2, Clock,
@@ -18,6 +18,9 @@ const Leads = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pagination, setPagination] = useState({ count: 0, current: 1 });
+  const [pageSize, setPageSize] = useState(10);
+  const pageSizeRef = useRef(pageSize);
+  pageSizeRef.current = pageSize;
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -44,7 +47,7 @@ const Leads = () => {
     glassBg: '#ffffff',
   };
 
-  const fetchLeads = async (page = 1) => {
+  const fetchLeads = async (page = 1, currentSize = pageSizeRef.current) => {
     setLoading(true);
     try {
       const stageId = searchParams.get('stage');
@@ -53,7 +56,13 @@ const Leads = () => {
       const atRisk = searchParams.get('at_risk');
       const missedFollowups = searchParams.get('missed_followups_only');
       const pendingFollowups = searchParams.get('pending_followups');
-      let url = `leads/?page=${page}&exclude_final=true`;
+      let url = `leads/?exclude_final=true`;
+
+      if (currentSize === 'all') {
+        url += `&no_pagination=true&page_size=all`;
+      } else {
+        url += `&page=${page}&page_size=${currentSize}`;
+      }
 
       if (user?.role === 'sales' || user?.role === 'agent') {
         url += `&user_priority_view=true`;
@@ -71,8 +80,13 @@ const Leads = () => {
       if (dateRange.startDate) url += `&start_date=${dateRange.startDate}`;
       if (dateRange.endDate) url += `&end_date=${dateRange.endDate}`;
       const res = await api.get(url);
-      setLeads(Array.isArray(res.data.results) ? res.data.results : []);
-      setPagination({ count: res.data.count || 0, current: page });
+      const leadsData = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      const totalCount = Array.isArray(res.data)
+        ? res.data.length
+        : (typeof res.data?.count === 'number' ? res.data.count : leadsData.length);
+
+      setLeads(leadsData);
+      setPagination({ count: totalCount, current: currentSize === 'all' ? 1 : page });
     } catch (err) {
       console.error('Fetch leads error:', err);
       setLeads([]);
@@ -123,9 +137,14 @@ const Leads = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    const timer = setTimeout(() => fetchLeads(1), searchQuery ? 500 : 0);
+    const timer = setTimeout(() => fetchLeads(1, pageSize), searchQuery ? 500 : 0);
     return () => clearTimeout(timer);
-  }, [searchParams, searchQuery, dateRange]);
+  }, [searchParams, searchQuery, dateRange, pageSize]);
+
+  const handlePageSizeChange = (newSize) => {
+    const parsed = newSize === 'all' ? 'all' : Number(newSize);
+    setPageSize(parsed);
+  };
 
   // --- Handlers ---
   const toggleSelectAll = () => {
@@ -595,13 +614,108 @@ const Leads = () => {
         )}
 
         {/* Footer / Pagination */}
-        <div style={{ padding: '20px', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: colors.textSub, fontWeight: '600' }}>Showing {leads.length} of {pagination.count} leads</span>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button disabled={pagination.current === 1} onClick={() => fetchLeads(pagination.current - 1)} className="btn-secondary" style={{ height: '36px', padding: '0 16px', background: 'white' }}>Previous</button>
-            <button disabled={pagination.current * 10 >= pagination.count} onClick={() => fetchLeads(pagination.current + 1)} className="btn-primary" style={{ height: '36px', padding: '0 16px' }}>Next</button>
-          </div>
-        </div>
+        {(() => {
+          const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(pagination.count / pageSize));
+          return (
+            <div style={{
+              padding: '16px 24px',
+              background: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: colors.textSub, fontWeight: '600' }}>
+                  Showing {leads.length} of {pagination.count} leads
+                </span>
+                {pageSize !== 'all' && pagination.count > 0 && (
+                  <span style={{
+                    fontSize: '12px',
+                    color: colors.primary,
+                    background: 'rgba(124, 58, 237, 0.08)',
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    fontWeight: '700'
+                  }}>
+                    Page {pagination.current} of {totalPages}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: colors.textSub, fontWeight: '600' }}>View:</span>
+                  <div style={{
+                    display: 'inline-flex',
+                    background: '#e2e8f0',
+                    padding: '3px',
+                    borderRadius: '8px',
+                    gap: '2px'
+                  }}>
+                    {[10, 25, 50, 100, 'all'].map((size) => {
+                      const isActive = pageSize === size;
+                      const label = size === 'all' ? 'View All' : size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => handlePageSizeChange(size)}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            fontWeight: isActive ? '700' : '600',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: isActive ? '#ffffff' : 'transparent',
+                            color: isActive ? colors.primary : colors.textSub,
+                            boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    disabled={pageSize === 'all' || pagination.current <= 1}
+                    onClick={() => fetchLeads(pagination.current - 1)}
+                    className="btn-secondary"
+                    style={{
+                      height: '36px',
+                      padding: '0 16px',
+                      background: 'white',
+                      opacity: (pageSize === 'all' || pagination.current <= 1) ? 0.5 : 1,
+                      cursor: (pageSize === 'all' || pagination.current <= 1) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={pageSize === 'all' || pagination.current >= totalPages}
+                    onClick={() => fetchLeads(pagination.current + 1)}
+                    className="btn-primary"
+                    style={{
+                      height: '36px',
+                      padding: '0 16px',
+                      opacity: (pageSize === 'all' || pagination.current >= totalPages) ? 0.5 : 1,
+                      cursor: (pageSize === 'all' || pagination.current >= totalPages) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Floating Bulk Action Bar */}

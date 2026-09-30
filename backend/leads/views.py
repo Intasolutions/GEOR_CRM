@@ -187,6 +187,15 @@ class LeadViewSet(viewsets.ModelViewSet):
     from rest_framework.pagination import PageNumberPagination
     class LeadPagination(PageNumberPagination):
         page_size = 10
+        page_size_query_param = 'page_size'
+        max_page_size = 10000
+
+        def get_page_size(self, request):
+            page_size = request.query_params.get(self.page_size_query_param)
+            if page_size and str(page_size).lower() in ['all', '-1', 'max']:
+                return self.max_page_size
+            return super().get_page_size(request)
+
     pagination_class = LeadPagination
 
     def paginate_queryset(self, queryset):
