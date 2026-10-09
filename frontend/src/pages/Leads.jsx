@@ -174,8 +174,9 @@ const Leads = () => {
     const targetStage = stages.find(s => s.id === parseInt(targetStageId));
     const targetNameLower = (targetStage?.name || '').toLowerCase();
     
-    // Disallow moving leads in Lost or Next Intake to Next Intake
-    if (targetNameLower.includes('intake')) {
+    const isLstAgent = (user?.username || '').toLowerCase().includes('lst') || user?.role === 'admin' || user?.role === 'manager';
+    // Disallow moving leads in Lost or Next Intake to Next Intake unless LST agent or admin
+    if (!isLstAgent && targetNameLower.includes('intake')) {
       const invalidLead = leads.find(l => selectedLeads.includes(l.id) && ((l.stage_name || '').toLowerCase().includes('lost') || (l.stage_name || '').toLowerCase().includes('intake')));
       if (invalidLead) {
         toast.error("Leads in Lost or Next Intake stages cannot be moved to Next Intake.");
@@ -760,9 +761,14 @@ const Leads = () => {
               onChange={e => isBulkStageModalOpen ? setTargetStageId(e.target.value) : setTargetUserId(e.target.value)}
             >
               <option value="">Choose target...</option>
-              {(isBulkStageModalOpen ? stages : users).map(item => (
-                <option key={item.id} value={item.id}>{item.name || item.username}</option>
-              ))}
+              {(isBulkStageModalOpen ? stages : users).map(item => {
+                const isItemLst = item.is_lst_agent || (item.username || '').toLowerCase().includes('lst');
+                return (
+                  <option key={item.id} value={item.id}>
+                    {item.name || `${item.username}${isItemLst ? ' ⭐ (Lost Leads Agent)' : ''}`}
+                  </option>
+                );
+              })}
             </select>
 
             <div style={{ display: 'flex', gap: '12px' }}>

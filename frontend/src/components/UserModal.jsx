@@ -172,6 +172,15 @@ const UserModal = ({ isOpen, onClose, onRefresh, editingUser = null }) => {
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
                 />
+                {(formData.username || '').toLowerCase().includes('lst') ? (
+                  <div style={{ fontSize: '11px', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⭐ <strong>Lost Leads Agent:</strong> This user will receive & work on Lost leads.</span>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                    Tip: Include <strong>LST</strong> in username (e.g. <em>agent_LST</em>) to assign lost leads.
+                  </span>
+                )}
                 <input 
                   required
                   type="email"

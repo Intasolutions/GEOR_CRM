@@ -34,12 +34,14 @@ class LeadViewSet(viewsets.ModelViewSet):
         is_sales_or_agent = profile and profile.role in ['sales', 'agent']
         is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
         is_marketer = profile and profile.role == 'marketer'
+        is_lst_agent = is_sales_or_agent and ('lst' in (user.username or '').lower())
 
         # Base queryset - Role Scoping
         if is_sales_or_agent:
             queryset = Lead.objects.filter(Q(assigned_to=user) | Q(campaign__assigned_users=user)).distinct()
-            # Hide lost, next intake and domestic leads from sales/agent users
-            queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='intake') | Q(stage__name__icontains='domestic'))
+            if not is_lst_agent:
+                # Hide lost, next intake and domestic leads from regular sales/agent users
+                queryset = queryset.exclude(Q(stage__name__icontains='lost') | Q(stage__name__icontains='intake') | Q(stage__name__icontains='domestic'))
         elif is_marketer:
             queryset = Lead.objects.filter(
                 Q(age__isnull=False) |
@@ -249,6 +251,8 @@ class LeadViewSet(viewsets.ModelViewSet):
 
         # ── Sequential Stage Enforcement for Sales/Agent users ─────────────────
         is_sales_or_agent = profile and profile.role in ['sales', 'agent']
+        is_lst_agent = is_sales_or_agent and ('lst' in (user.username or '').lower())
+        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
 
         new_stage_id = serializer.validated_data.get('stage', old_stage)
         if hasattr(new_stage_id, 'id'):
@@ -259,11 +263,12 @@ class LeadViewSet(viewsets.ModelViewSet):
         if old_stage and new_stage_obj and old_stage != new_stage_obj:
             old_name_lower = old_stage.name.lower()
             new_name_lower = new_stage_obj.name.lower()
-            if ('lost' in old_name_lower or 'intake' in old_name_lower) and 'intake' in new_name_lower:
+            # Disallow moving between Lost and Next Intake unless handled by LST agent or admin/manager
+            if ('lost' in old_name_lower or 'intake' in old_name_lower) and 'intake' in new_name_lower and not (is_admin_or_manager or is_lst_agent):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError("Leads in 'Lost' or 'Next Intake' stages cannot be moved to 'Next Intake'.")
 
-        if is_sales_or_agent and new_stage_obj and old_stage and new_stage_obj != old_stage:
+        if is_sales_or_agent and not is_lst_agent and new_stage_obj and old_stage and new_stage_obj != old_stage:
             # Special exit stages are always allowed
             SPECIAL_STAGES = ['lost', 'intake', 'domestic']
             new_stage_name_lower = new_stage_obj.name.lower()
@@ -279,7 +284,6 @@ class LeadViewSet(viewsets.ModelViewSet):
                         f"Next allowed stage is Order {old_stage.order + 1}."
                     )
         # ── Mandatory Call/Screenshot Upload for Every Stage Change ───────────
-        is_admin_or_manager = user.is_superuser or (profile and profile.role in ['admin', 'manager'])
         if not is_admin_or_manager and new_stage_obj and old_stage and new_stage_obj != old_stage:
             # Find the timestamp of the last stage change
             last_change = LeadAuditLog.objects.filter(
@@ -679,11 +683,13 @@ class ReminderViewSet(viewsets.ModelViewSet):
             queryset = Reminder.objects.filter(Q(lead__assigned_to=user) | Q(lead__campaign__assigned_users=user)).distinct()
             
         lead_id = self.request.query_params.get('lead')
+        is_lst_agent = 'lst' in (user.username or '').lower()
         if lead_id:
             queryset = queryset.filter(lead_id=lead_id)
         else:
-            # Exclude reminders for leads in Lost or Intake stages from general views
-            queryset = queryset.exclude(Q(lead__stage__name__icontains='lost') | Q(lead__stage__name__icontains='intake'))
+            # Exclude reminders for leads in Lost or Intake stages from general views UNLESS handled by LST agent or admin/manager
+            if not (role in ['admin', 'manager'] or is_lst_agent):
+                queryset = queryset.exclude(Q(lead__stage__name__icontains='lost') | Q(lead__stage__name__icontains='intake'))
         return queryset.order_by('scheduled_at')
 
     def paginate_queryset(self, queryset):
@@ -697,35 +703,39 @@ class ReminderViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.validated_data.get('lead')
         
-        # Block scheduling follow-up / next date for Lost and Next Intake stages
+        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
+        is_lst_agent = 'lst' in (user.username or '').lower()
+
+        # Block scheduling follow-up / next date for Lost and Next Intake stages EXCEPT for Admin/Manager and LST agent
         stage_name_lower = (lead.stage.name if lead and lead.stage else '').lower()
         if 'lost' in stage_name_lower or 'intake' in stage_name_lower:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("Next date / follow-up cannot be added to leads in Lost or Next Intake stages.")
+            if not (is_admin_or_manager or is_lst_agent):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Next date / follow-up cannot be added to leads in Lost or Next Intake stages.")
         
-        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
         if not is_admin_or_manager:
             if lead.assigned_to != user and user not in (lead.campaign.assigned_users.all() if lead.campaign else []):
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied("You do not have access to this lead.")
                 
-            # Mandatory check: Must upload doc/call before scheduling any follow-up date
-            old_stage = lead.stage
-            last_change = LeadAuditLog.objects.filter(
-                lead=lead, 
-                action="Stage Changed"
-            ).order_by('-timestamp').first()
-            
-            cutoff = last_change.timestamp if last_change else lead.created_at
-            
-            has_doc = LeadDocument.objects.filter(lead=lead, uploaded_at__gte=cutoff).exists()
-            has_call = CallRecord.objects.filter(lead=lead, timestamp__gte=cutoff).exists()
-            
-            if not (has_doc or has_call):
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError(
-                    f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name if old_stage else 'New Lead'}' before scheduling a follow-up date."
-                )
+            # Mandatory check: Must upload doc/call before scheduling any follow-up date (exempt LST agent)
+            if not is_lst_agent:
+                old_stage = lead.stage
+                last_change = LeadAuditLog.objects.filter(
+                    lead=lead, 
+                    action="Stage Changed"
+                ).order_by('-timestamp').first()
+                
+                cutoff = last_change.timestamp if last_change else lead.created_at
+                
+                has_doc = LeadDocument.objects.filter(lead=lead, uploaded_at__gte=cutoff).exists()
+                has_call = CallRecord.objects.filter(lead=lead, timestamp__gte=cutoff).exists()
+                
+                if not (has_doc or has_call):
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError(
+                        f"Mandatory: You must upload a call record or screenshot/document for the current stage '{old_stage.name if old_stage else 'New Lead'}' before scheduling a follow-up date."
+                    )
             
         serializer.save(user=user)
 
@@ -735,21 +745,23 @@ class ReminderViewSet(viewsets.ModelViewSet):
         role = profile.role if profile else 'agent'
         lead = serializer.instance.lead
         
-        # Block scheduling follow-up / next date for Lost and Next Intake stages
+        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
+        is_lst_agent = 'lst' in (user.username or '').lower()
+
+        # Block scheduling follow-up / next date for Lost and Next Intake stages EXCEPT for Admin/Manager and LST agent
         stage_name_lower = (lead.stage.name if lead and lead.stage else '').lower()
         if 'lost' in stage_name_lower or 'intake' in stage_name_lower:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError("Next date / follow-up cannot be scheduled or modified for leads in Lost or Next Intake stages.")
+            if not (is_admin_or_manager or is_lst_agent):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError("Next date / follow-up cannot be scheduled or modified for leads in Lost or Next Intake stages.")
 
-        is_admin_or_manager = user.is_superuser or role in ['admin', 'manager']
-        
         # Disallow setting status to 'completed' directly
         new_status = serializer.validated_data.get('status')
         if new_status == 'completed' and not is_admin_or_manager:
             from rest_framework.exceptions import ValidationError
             raise ValidationError("Marking tasks as completed directly is disabled. Leads are progressed by uploading records and advancing stages.")
 
-        if not is_admin_or_manager:
+        if not is_admin_or_manager and not is_lst_agent:
             old_stage = lead.stage
             last_change = LeadAuditLog.objects.filter(
                 lead=lead, 

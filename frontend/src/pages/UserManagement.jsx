@@ -99,7 +99,22 @@ const UserManagement = () => {
                                         <div style={{ width: '36px', height: '36px', background: 'var(--bg-tertiary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--brand-blue)' }}>
                                             {u.username?.[0]?.toUpperCase() || 'U'}
                                         </div>
-                                        <span style={{ fontWeight: '600' }}>{u.username}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: '600' }}>{u.username}</span>
+                                            {(u.is_lst_agent || (u.username || '').toLowerCase().includes('lst')) && (
+                                                <span style={{ 
+                                                    fontSize: '10px', 
+                                                    background: '#eff6ff', 
+                                                    color: '#1d4ed8', 
+                                                    border: '1px solid #bfdbfe', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '6px', 
+                                                    fontWeight: '700' 
+                                                }}>
+                                                    ⭐ Lost Leads Agent
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </td>
                                 <td>{u.email}</td>

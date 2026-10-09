@@ -19,10 +19,14 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     role = serializers.CharField(source='profile.role', required=False)
     permissions = serializers.JSONField(source='profile.permissions', required=False)
+    is_lst_agent = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'role', 'permissions']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'role', 'permissions', 'is_lst_agent']
+
+    def get_is_lst_agent(self, obj):
+        return 'lst' in (obj.username or '').lower()
 
     def create(self, validated_data):
         profile_data = validated_data.pop('profile', {})
@@ -206,7 +210,12 @@ class ReminderSerializer(serializers.ModelSerializer):
         if lead and lead.stage:
             stage_name = lead.stage.name.lower()
             if 'lost' in stage_name or 'intake' in stage_name:
-                raise serializers.ValidationError("Next date / follow-up cannot be scheduled for leads in Lost or Next Intake stages.")
+                request = self.context.get('request')
+                user = getattr(request, 'user', None) if request else None
+                is_lst_agent = user and ('lst' in (getattr(user, 'username', '') or '').lower())
+                is_admin_or_manager = user and (user.is_superuser or (getattr(user, 'profile', None) and user.profile.role in ['admin', 'manager']))
+                if not (is_lst_agent or is_admin_or_manager):
+                    raise serializers.ValidationError("Next date / follow-up cannot be scheduled for leads in Lost or Next Intake stages.")
         return data
 
 class LeadDocumentSerializer(serializers.ModelSerializer):

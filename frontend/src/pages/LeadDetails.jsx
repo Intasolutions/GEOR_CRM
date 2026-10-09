@@ -183,6 +183,8 @@ const LeadDetails = () => {
     return hasDoc || hasCall;
   };
 
+  const isLstAgent = (user?.username || '').toLowerCase().includes('lst') || user?.role === 'admin' || user?.role === 'manager';
+
   const isLostOrNextIntake = (stageNameOrObj) => {
     const raw = typeof stageNameOrObj === 'string' 
       ? stageNameOrObj 
@@ -193,6 +195,7 @@ const LeadDetails = () => {
 
   const isStageUpdateDisabled = (targetStage) => {
     if (!lead || !user || !targetStage) return false;
+    if (isLstAgent) return false; // LST agent and admins can re-open or transition lost leads
     
     // Find lead's current stage object
     const currentStageObj = stages.find(s => s.id === lead.stage);
@@ -223,7 +226,7 @@ const LeadDetails = () => {
     if (isStageUpdateDisabled(targetStage)) {
       const currentName = (stages.find(s => s.id === lead.stage)?.name || lead?.stage_name || '').toLowerCase();
       const targetName = (targetStage?.name || '').toLowerCase();
-      if ((currentName.includes('lost') || currentName.includes('intake')) && targetName.includes('intake')) {
+      if (!isLstAgent && (currentName.includes('lost') || currentName.includes('intake')) && targetName.includes('intake')) {
         toast.error("Leads in Lost or Next Intake stages cannot be moved to Next Intake.");
         return;
       }
@@ -474,11 +477,11 @@ const LeadDetails = () => {
   };
 
   const handleOpenScheduleReminder = () => {
-    if (isLostOrNextIntake(lead?.stage_name)) {
+    if (!isLstAgent && isLostOrNextIntake(lead?.stage_name)) {
       toast.error("Follow-up / next dates cannot be scheduled for leads in Lost or Next Intake stages.");
       return;
     }
-    if (!hasUploadOrRecordingForCurrentStage()) {
+    if (!isLstAgent && !hasUploadOrRecordingForCurrentStage()) {
       toast.error("Mandatory: You must upload a document or call recording before scheduling a next date.");
       return;
     }
@@ -489,12 +492,12 @@ const LeadDetails = () => {
     e.preventDefault();
     if (!reminderNote || !reminderDate) return;
 
-    if (isLostOrNextIntake(lead?.stage_name)) {
+    if (!isLstAgent && isLostOrNextIntake(lead?.stage_name)) {
       toast.error("Follow-up / next dates cannot be scheduled for leads in Lost or Next Intake stages.");
       return;
     }
 
-    if (!hasUploadOrRecordingForCurrentStage()) {
+    if (!isLstAgent && !hasUploadOrRecordingForCurrentStage()) {
       toast.error("Mandatory: You must upload a document or call recording before scheduling a follow-up date.");
       return;
     }
@@ -539,7 +542,7 @@ const LeadDetails = () => {
   };
 
   const openEditReminder = (rem) => {
-    if (isLostOrNextIntake(lead?.stage_name)) {
+    if (!isLstAgent && isLostOrNextIntake(lead?.stage_name)) {
       toast.error("Follow-up / next dates cannot be modified for leads in Lost or Next Intake stages.");
       return;
     }
@@ -1512,7 +1515,7 @@ const LeadDetails = () => {
             </div>
             
             <div style={{ padding: '24px' }}>
-              {isLostOrNextIntake(lead?.stage_name) ? (
+              {!isLstAgent && isLostOrNextIntake(lead?.stage_name) ? (
                 <div style={{ padding: '14px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <AlertCircle size={16} /> Next date / intake cannot be scheduled for {lead?.stage_name || 'this'} stage.
                 </div>
@@ -1537,7 +1540,7 @@ const LeadDetails = () => {
                     >
                       <AlertCircle size={24} style={{ color: 'var(--text-secondary)', margin: '0 auto 12px', opacity: 0.5 }} />
                       <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>No reminders scheduled.</p>
-                      {!isLostOrNextIntake(lead?.stage_name) && (
+                      {(!isLostOrNextIntake(lead?.stage_name) || isLstAgent) && (
                         <button onClick={handleOpenScheduleReminder} style={{ background: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '700', marginTop: '12px' }}>Click to add one</button>
                       )}
                     </motion.div>
@@ -1553,7 +1556,7 @@ const LeadDetails = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <select 
                               value={rem.status}
-                              disabled={isLostOrNextIntake(lead?.stage_name)}
+                              disabled={!isLstAgent && isLostOrNextIntake(lead?.stage_name)}
                               onChange={(e) => handleToggleReminderStatus(rem.id, e.target.value)}
                               style={{ 
                                 border: 'none', 
@@ -1576,7 +1579,7 @@ const LeadDetails = () => {
                               Task
                             </span>
                           </div>
-                          {rem.status === 'pending' && !isLostOrNextIntake(lead?.stage_name) && (
+                          {rem.status === 'pending' && (!isLostOrNextIntake(lead?.stage_name) || isLstAgent) && (
                             <button onClick={() => openEditReminder(rem)} style={{ background: 'none', border: 'none', color: 'var(--brand-blue)', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Edit3 size={12} /> Edit
                             </button>
